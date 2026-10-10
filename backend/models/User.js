@@ -24,14 +24,26 @@ const userSchema = new mongoose.Schema(
 
         role: {
             type: String,
-            enum: ["student", "lecturer"],
+            enum: ["student", "lecturer", "admin"],
             required: true
-            }
         },
-        
-        {
+
+        status: {
+            type: String,
+            enum: ["active", "inactive"],
+            default: "active",
+            required: true
+        },
+
+        mustChangePassword: {
+            type: Boolean,
+            default: true,
+            required: true
+        }
+    },
+    {
         timestamps: true
-        } 
+    }
 );
 
-module.experts = mongoose.model("User",userSchema);
+module.exports = mongoose.model("User", userSchema);
