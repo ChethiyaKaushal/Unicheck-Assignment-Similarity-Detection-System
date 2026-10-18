@@ -1,9 +1,10 @@
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 function AssignmentDetails() {
 
   const navigate = useNavigate();
+  const { id } = useParams();
 
   return (
     <div className="flex min-h-screen bg-emerald-50">
@@ -37,19 +38,19 @@ function AssignmentDetails() {
 
           <button
             className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50"
-          >
+           onClick={() => navigate("/submissions")}>
             Submissions
           </button>
 
           <button
             className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50"
-          >
+           onClick={() => navigate("/similarity-check")}>
             Similarity Check
           </button>
 
           <button
             className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50"
-          >
+           onClick={() => navigate("/reports")}>
             Reports
           </button>
 
@@ -60,7 +61,7 @@ function AssignmentDetails() {
 
           <button
             className="w-full text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50 mb-2"
-          >
+           onClick={() => navigate("/profile")}>
             Profile
           </button>
 
@@ -274,25 +275,25 @@ function AssignmentDetails() {
 
             <button
               className="px-5 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-            >
+             onClick={() => navigate("/submissions")}>
               View Submissions
             </button>
 
             <button
               className="px-5 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
-            >
+             onClick={() => navigate("/similarity-check")}>
               Check Similarity
             </button>
 
             <button
               className="px-5 py-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
-            >
+             onClick={() => navigate("/reports")}>
               Generate Report
             </button>
 
             <button
               className="px-5 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-            >
+             onClick={() => navigate("/assignment/" + id + "/edit")}>
               Edit Assignment
             </button>
 

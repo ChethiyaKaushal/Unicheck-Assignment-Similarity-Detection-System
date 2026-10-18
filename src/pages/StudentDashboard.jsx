@@ -1,4 +1,7 @@
+import { Link, useNavigate } from "react-router-dom";
+
 function StudentDashboard() {
+  const navigate = useNavigate();
   return (
     <div className="flex min-h-screen bg-emerald-50">
 
@@ -9,33 +12,13 @@ function StudentDashboard() {
           UniCheck
         </h2>
 
-        <a
-          href=""
-          className="py-3 px-4 rounded-lg bg-emerald-100 text-emerald-700 font-medium"
-        >
-          Dashboard
-        </a>
+        <Link to="/student-dashboard" className="py-3 px-4 rounded-lg bg-emerald-100 text-emerald-700 font-medium">Dashboard</Link>
 
-        <a
-          href=""
-          className="py-3 px-4 rounded-lg hover:bg-emerald-50"
-        >
-          My Assignments
-        </a>
+        <Link to="/student/assignments" className="py-3 px-4 rounded-lg hover:bg-emerald-50">My Assignments</Link>
 
-        <a
-          href=""
-          className="py-3 px-4 rounded-lg hover:bg-emerald-50"
-        >
-          My Submissions
-        </a>
+        <Link to="/student/submissions" className="py-3 px-4 rounded-lg hover:bg-emerald-50">My Submissions</Link>
 
-        <a
-          href=""
-          className="py-3 px-4 rounded-lg hover:bg-emerald-50"
-        >
-          Results
-        </a>
+        <Link to="/student/results" className="py-3 px-4 rounded-lg hover:bg-emerald-50">Results</Link>
 
       </nav>
 
@@ -80,7 +63,7 @@ function StudentDashboard() {
                 3 Assignments
               </p>
 
-              <button className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+              <button onClick={() => navigate("/modules/database-systems")} className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
                 View Module
               </button>
 
@@ -102,7 +85,7 @@ function StudentDashboard() {
                 2 Assignments
               </p>
 
-              <button className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+              <button onClick={() => navigate("/modules/operating-systems")} className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
                 View Module
               </button>
 
@@ -124,7 +107,7 @@ function StudentDashboard() {
                 4 Assignments
               </p>
 
-              <button className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+              <button onClick={() => navigate("/modules/computer-networks")} className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
                 View Module
               </button>
 
@@ -146,7 +129,7 @@ function StudentDashboard() {
                 3 Assignments
               </p>
 
-              <button className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+              <button onClick={() => navigate("/modules/software-engineering")} className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
                 View Module
               </button>
 
@@ -168,7 +151,7 @@ function StudentDashboard() {
                 2 Assignments
               </p>
 
-              <button className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+              <button onClick={() => navigate("/modules/data-structures")} className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
                 View Module
               </button>
 
@@ -190,7 +173,7 @@ function StudentDashboard() {
                 2 Assignments
               </p>
 
-              <button className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+              <button onClick={() => navigate("/modules/wireless-communications")} className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
                 View Module
               </button>
 

@@ -1,7 +1,15 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function Profile() {
   const navigate = useNavigate();
+  const [isEditing, setIsEditing] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [profile, setProfile] = useState(() => {
+    const defaults = { name: "Dr. Dinesh Kumar", email: "dinesh@unicheck.com", staffId: "LEC-001", department: "Computer Engineering" };
+    try { return { ...defaults, ...JSON.parse(localStorage.getItem("unicheckDemoProfile") || "{}") }; }
+    catch { return defaults; }
+  });
 
   return (
     <div className="flex min-h-screen bg-emerald-50">
@@ -132,8 +140,9 @@ function Profile() {
 
                 <input
                   type="text"
-                  value="Dr. Dinesh Kumar"
-                  readOnly
+                  value={profile.name}
+                  readOnly={!isEditing}
+                  onChange={(event) => setProfile({ ...profile, name: event.target.value })}
                   className="w-full border border-gray-200 rounded-lg px-4 py-3 bg-gray-50 text-gray-700"
                 />
               </div>
@@ -145,8 +154,9 @@ function Profile() {
 
                 <input
                   type="email"
-                  value="dinesh@unicheck.com"
-                  readOnly
+                  value={profile.email}
+                  readOnly={!isEditing}
+                  onChange={(event) => setProfile({ ...profile, email: event.target.value })}
                   className="w-full border border-gray-200 rounded-lg px-4 py-3 bg-gray-50 text-gray-700"
                 />
               </div>
@@ -158,8 +168,9 @@ function Profile() {
 
                 <input
                   type="text"
-                  value="LEC-001"
-                  readOnly
+                  value={profile.staffId}
+                  readOnly={!isEditing}
+                  onChange={(event) => setProfile({ ...profile, staffId: event.target.value })}
                   className="w-full border border-gray-200 rounded-lg px-4 py-3 bg-gray-50 text-gray-700"
                 />
               </div>
@@ -171,8 +182,9 @@ function Profile() {
 
                 <input
                   type="text"
-                  value="Computer Engineering"
-                  readOnly
+                  value={profile.department}
+                  readOnly={!isEditing}
+                  onChange={(event) => setProfile({ ...profile, department: event.target.value })}
                   className="w-full border border-gray-200 rounded-lg px-4 py-3 bg-gray-50 text-gray-700"
                 />
               </div>
@@ -218,10 +230,21 @@ function Profile() {
           <div className="flex gap-4 mt-8 pt-6 border-t border-gray-100">
 
             <button
+              onClick={() => {
+                if (isEditing) {
+                  localStorage.setItem("unicheckDemoProfile", JSON.stringify(profile));
+                  setIsEditing(false);
+                  setSaved(true);
+                } else {
+                  setIsEditing(true);
+                  setSaved(false);
+                }
+              }}
               className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
             >
-              Edit Profile
+              {isEditing ? "Save Profile" : "Edit Profile"}
             </button>
+            {saved && <span role="status" className="self-center text-sm text-emerald-700">Saved in this browser.</span>}
 
             <button
               onClick={() => navigate("/lecturer-dashboard")}

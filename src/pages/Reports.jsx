@@ -225,7 +225,7 @@ function Reports() {
                   </td>
 
                   <td className="px-6 py-4">
-                    <button className="text-emerald-600 hover:text-emerald-800 font-medium">
+                    <button onClick={() => navigate("/reports/demo")} className="text-emerald-600 hover:text-emerald-800 font-medium">
                       View Report
                     </button>
                   </td>
@@ -258,7 +258,7 @@ function Reports() {
                   </td>
 
                   <td className="px-6 py-4">
-                    <button className="text-emerald-600 hover:text-emerald-800 font-medium">
+                    <button onClick={() => navigate("/reports/demo")} className="text-emerald-600 hover:text-emerald-800 font-medium">
                       View Report
                     </button>
                   </td>
@@ -291,7 +291,7 @@ function Reports() {
                   </td>
 
                   <td className="px-6 py-4">
-                    <button className="text-emerald-600 hover:text-emerald-800 font-medium">
+                    <button onClick={() => navigate("/reports/demo")} className="text-emerald-600 hover:text-emerald-800 font-medium">
                       View Report
                     </button>
                   </td>
@@ -324,7 +324,7 @@ function Reports() {
                   </td>
 
                   <td className="px-6 py-4">
-                    <button className="text-emerald-600 hover:text-emerald-800 font-medium">
+                    <button onClick={() => navigate("/reports/demo")} className="text-emerald-600 hover:text-emerald-800 font-medium">
                       View Report
                     </button>
                   </td>
@@ -357,7 +357,7 @@ function Reports() {
                   </td>
 
                   <td className="px-6 py-4">
-                    <button className="text-emerald-600 hover:text-emerald-800 font-medium">
+                    <button onClick={() => navigate("/reports/demo")} className="text-emerald-600 hover:text-emerald-800 font-medium">
                       View Report
                     </button>
                   </td>

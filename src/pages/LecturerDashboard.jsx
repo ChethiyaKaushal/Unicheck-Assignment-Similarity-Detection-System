@@ -1,5 +1,8 @@
 
+import { useNavigate } from "react-router-dom";
+
 function LecturerDashboard() {
+  const navigate = useNavigate();
   return (
     <div className="flex min-h-screen bg-emerald-50">
 
@@ -18,23 +21,23 @@ function LecturerDashboard() {
         {/* Navigation */}
         <div className="flex flex-col gap-2">
 
-          <button className="text-left px-4 py-3 rounded-lg bg-emerald-100 text-emerald-700 font-medium">
+          <button className="text-left px-4 py-3 rounded-lg bg-emerald-100 text-emerald-700 font-medium" onClick={() => navigate("/lecturer-dashboard")}>
             Dashboard
           </button>
 
-          <button className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50">
+          <button className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50" onClick={() => navigate("/assignments")}>
             Assignments
           </button>
 
-          <button className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50">
+          <button className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50" onClick={() => navigate("/submissions")}>
             Submissions
           </button>
 
-          <button className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50">
+          <button className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50" onClick={() => navigate("/similarity-check")}>
             Similarity Check
           </button>
 
-          <button className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50">
+          <button className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50" onClick={() => navigate("/reports")}>
             Reports
           </button>
 
@@ -43,11 +46,11 @@ function LecturerDashboard() {
         {/* Bottom section */}
         <div className="mt-auto">
 
-          <button className="w-full text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50 mb-2">
+          <button className="w-full text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50 mb-2" onClick={() => navigate("/profile")}>
             Profile
           </button>
 
-          <button className="w-full text-left px-4 py-3 rounded-lg text-red-500 hover:bg-red-50">
+          <button className="w-full text-left px-4 py-3 rounded-lg text-red-500 hover:bg-red-50" onClick={() => navigate("/login")}>
             Logout
           </button>
 
@@ -151,7 +154,7 @@ function LecturerDashboard() {
                 Recent Assignments
               </h2>
 
-              <button className="text-emerald-600 text-sm font-medium">
+              <button className="text-emerald-600 text-sm font-medium" onClick={() => navigate("/assignments")}>
                 View All
               </button>
 
@@ -241,7 +244,7 @@ function LecturerDashboard() {
                 Recent Submissions
               </h2>
 
-              <button className="text-emerald-600 text-sm font-medium">
+              <button className="text-emerald-600 text-sm font-medium" onClick={() => navigate("/submissions")}>
                 View All
               </button>
 
@@ -333,19 +336,19 @@ function LecturerDashboard() {
 
           <div className="flex flex-wrap gap-4">
 
-            <button className="px-5 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+            <button className="px-5 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700" onClick={() => navigate("/assignments/new")}>
               + Create Assignment
             </button>
 
-            <button className="px-5 py-3 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200">
+            <button className="px-5 py-3 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200" onClick={() => navigate("/submissions")}>
               View Submissions
             </button>
 
-            <button className="px-5 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200">
+            <button className="px-5 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200" onClick={() => navigate("/similarity-check")}>
               Check Similarity
             </button>
 
-            <button className="px-5 py-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200">
+            <button className="px-5 py-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200" onClick={() => navigate("/reports")}>
               Generate Report
             </button>
 

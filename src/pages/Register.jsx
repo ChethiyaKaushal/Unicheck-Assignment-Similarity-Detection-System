@@ -1,4 +1,7 @@
+import { useNavigate } from "react-router-dom";
+
 function Register() {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-emerald-50 flex items-center justify-center py-10">
       <div className="bg-white w-full max-w-md p-8 rounded-2xl shadow-lg">
@@ -116,16 +119,13 @@ function Register() {
         </div>
 
         {/* Sign Up Button */}
-        <button className="w-full mt-6 bg-emerald-600 text-white p-3 rounded-lg hover:bg-emerald-700">
+        <button type="button" onClick={() => navigate("/login", { state: { notice: "Frontend demo only: no account was created." } })} className="w-full mt-6 bg-emerald-600 text-white p-3 rounded-lg hover:bg-emerald-700">
           Sign Up
         </button>
 
-        {/* Login text - NOT LINKED YET */}
         <p className="text-center text-sm text-gray-500 mt-5">
           Already have an account?{" "}
-          <span className="text-emerald-600 font-medium">
-            Login
-          </span>
+          <button type="button" onClick={() => navigate("/login")} className="text-emerald-600 font-medium hover:underline">Login</button>
         </p>
 
       </div>
