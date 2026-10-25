@@ -27,7 +27,7 @@ function runTesseract(imagePath) {
     return new Promise((resolve, reject) => {
         const process = spawn(
             TESSERACT_PATH,
-            [imagePath, "stdout", "-l", "eng", "--psm", "3"],
+            [imagePath, "stdout", "-l", "eng", "--psm", "6"],
             { windowsHide: true }
         );
 
@@ -202,8 +202,18 @@ function parseSubQuestionMarker(line) {
 
 function parseQuestionHierarchy(text) {
     const lines = text
-        .replace(/\r\n/g, "\n")
-        .split("\n");
+    .replace(/\r\n/g, "\n")
+    // Remove page markers added by the OCR service.
+    .replace(
+        /^\s*---\s*PAGE\s+\d+(?:\s+OF\s+\d+)?\s*---\s*$/gim,
+        ""
+    )
+    // Remove OCR page headers, including "Page 1 of 3".
+    .replace(
+        /^\s*Page\s+\d+\s+of\s+\d+\s*$/gim,
+        ""
+    )
+    .split("\n");
 
     const questions = [];
 

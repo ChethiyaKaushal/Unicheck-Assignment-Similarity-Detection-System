@@ -4,3 +4,8 @@ node_modules/
 !.env.example
 dist/
 build/
+# UniCheck local PDF and OCR test artifacts
+/backend/private_uploads/
+/backend/*.pdf
+/backend/question-page-*.png
+/backend/question-paper-ocr.txt
