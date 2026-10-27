@@ -1,365 +1,39 @@
+import { useEffect, useState } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { api, currentUser, logout } from "../lib/api";
 
-import { useNavigate } from "react-router-dom";
-
-function LecturerDashboard() {
+export default function LecturerDashboard() {
   const navigate = useNavigate();
-  return (
-    <div className="flex min-h-screen bg-emerald-50">
-
-      {/* Sidebar */}
-      <nav className="flex flex-col w-64 min-h-screen bg-white p-6 shadow-md">
-
-        {/* Logo / Name */}
-        <h2 className="text-2xl font-bold text-emerald-700 mb-2">
-          UniCheck
-        </h2>
-
-        <p className="text-sm text-gray-500 mb-8">
-          Lecturer Panel
-        </p>
-
-        {/* Navigation */}
-        <div className="flex flex-col gap-2">
-
-          <button className="text-left px-4 py-3 rounded-lg bg-emerald-100 text-emerald-700 font-medium" onClick={() => navigate("/lecturer-dashboard")}>
-            Dashboard
-          </button>
-
-          <button className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50" onClick={() => navigate("/assignments")}>
-            Assignments
-          </button>
-
-          <button className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50" onClick={() => navigate("/submissions")}>
-            Submissions
-          </button>
-
-          <button className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50" onClick={() => navigate("/similarity-check")}>
-            Similarity Check
-          </button>
-
-          <button className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50" onClick={() => navigate("/reports")}>
-            Reports
-          </button>
-
-        </div>
-
-        {/* Bottom section */}
-        <div className="mt-auto">
-
-          <button className="w-full text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50 mb-2" onClick={() => navigate("/profile")}>
-            Profile
-          </button>
-
-          <button className="w-full text-left px-4 py-3 rounded-lg text-red-500 hover:bg-red-50" onClick={() => navigate("/login")}>
-            Logout
-          </button>
-
-        </div>
-
+  const [assignments, setAssignments] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    Promise.all([api("/assignments"), api("/submissions")])
+      .then(([a, s]) => { setAssignments(a.assignments); setSubmissions(s.submissions); })
+      .catch((issue) => setError(issue.message));
+  }, []);
+  const user = currentUser();
+  const navClass = ({ isActive }) => isActive ? "active" : "";
+  return <div className="app-frame">
+    <aside className="app-sidebar">
+      <div className="app-brand"><div className="brand-mark">UC</div><div><strong className="block text-lg">UniCheck</strong><span className="text-xs text-gray-500">Lecturer workspace</span></div></div>
+      <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[.18em] text-gray-500">Workspace</p>
+      <nav className="app-nav">
+        <NavLink to="/lecturer-dashboard" className={navClass}><span>⌂</span>Dashboard</NavLink>
+        <NavLink to="/assignments" className={navClass}><span>▤</span>Assignments</NavLink>
+        <NavLink to="/submissions" className={navClass}><span>⇧</span>Submissions</NavLink>
+        <NavLink to="/reports" className={navClass}><span>◷</span>Similarity reports</NavLink>
+        <NavLink to="/profile" className={navClass}><span>○</span>Profile</NavLink>
       </nav>
-
-
-      {/* Main Content */}
-      <main className="flex-1 p-8">
-
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">
-              Lecturer Dashboard
-            </h1>
-
-            <p className="text-gray-500 mt-1">
-              Manage assignments and check student submissions
-            </p>
-          </div>
-
-          <div className="bg-white px-5 py-3 rounded-lg shadow-sm">
-            <p className="text-sm text-gray-500">
-              Welcome
-            </p>
-
-            <p className="font-semibold text-gray-800">
-              Lecturer
-            </p>
-          </div>
-
-        </div>
-
-
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-
-          {/* Assignments */}
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <p className="text-gray-500 text-sm">
-              Total Assignments
-            </p>
-
-            <h2 className="text-3xl font-bold text-emerald-700 mt-2">
-              12
-            </h2>
-          </div>
-
-
-          {/* Submissions */}
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <p className="text-gray-500 text-sm">
-              Submissions
-            </p>
-
-            <h2 className="text-3xl font-bold text-blue-600 mt-2">
-              148
-            </h2>
-          </div>
-
-
-          {/* Pending */}
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <p className="text-gray-500 text-sm">
-              Pending Checks
-            </p>
-
-            <h2 className="text-3xl font-bold text-orange-500 mt-2">
-              23
-            </h2>
-          </div>
-
-
-          {/* Reports */}
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <p className="text-gray-500 text-sm">
-              Reports Generated
-            </p>
-
-            <h2 className="text-3xl font-bold text-purple-600 mt-2">
-              89
-            </h2>
-          </div>
-
-        </div>
-
-
-        {/* Main Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-
-          {/* Recent Assignments */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-
-            <div className="flex justify-between items-center mb-5">
-
-              <h2 className="text-xl font-semibold text-gray-800">
-                Recent Assignments
-              </h2>
-
-              <button className="text-emerald-600 text-sm font-medium" onClick={() => navigate("/assignments")}>
-                View All
-              </button>
-
-            </div>
-
-
-            {/* Assignment 1 */}
-            <div className="border-b border-gray-100 py-4">
-
-              <div className="flex justify-between">
-
-                <div>
-                  <h3 className="font-semibold text-gray-800">
-                    Database Management
-                  </h3>
-
-                  <p className="text-sm text-gray-500">
-                    32 submissions
-                  </p>
-                </div>
-
-                <span className="text-sm bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full h-fit">
-                  Active
-                </span>
-
-              </div>
-
-            </div>
-
-
-            {/* Assignment 2 */}
-            <div className="border-b border-gray-100 py-4">
-
-              <div className="flex justify-between">
-
-                <div>
-                  <h3 className="font-semibold text-gray-800">
-                    Operating Systems
-                  </h3>
-
-                  <p className="text-sm text-gray-500">
-                    45 submissions
-                  </p>
-                </div>
-
-                <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full h-fit">
-                  Checking
-                </span>
-
-              </div>
-
-            </div>
-
-
-            {/* Assignment 3 */}
-            <div className="py-4">
-
-              <div className="flex justify-between">
-
-                <div>
-                  <h3 className="font-semibold text-gray-800">
-                    Computer Networks
-                  </h3>
-
-                  <p className="text-sm text-gray-500">
-                    28 submissions
-                  </p>
-                </div>
-
-                <span className="text-sm bg-gray-100 text-gray-600 px-3 py-1 rounded-full h-fit">
-                  Closed
-                </span>
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* Recent Submissions */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-
-            <div className="flex justify-between items-center mb-5">
-
-              <h2 className="text-xl font-semibold text-gray-800">
-                Recent Submissions
-              </h2>
-
-              <button className="text-emerald-600 text-sm font-medium" onClick={() => navigate("/submissions")}>
-                View All
-              </button>
-
-            </div>
-
-
-            {/* Submission 1 */}
-            <div className="border-b border-gray-100 py-4">
-
-              <div className="flex justify-between">
-
-                <div>
-                  <h3 className="font-semibold text-gray-800">
-                    Kasun Perera
-                  </h3>
-
-                  <p className="text-sm text-gray-500">
-                    Database Management
-                  </p>
-                </div>
-
-                <span className="text-sm text-orange-500">
-                  Pending
-                </span>
-
-              </div>
-
-            </div>
-
-
-            {/* Submission 2 */}
-            <div className="border-b border-gray-100 py-4">
-
-              <div className="flex justify-between">
-
-                <div>
-                  <h3 className="font-semibold text-gray-800">
-                    Nimal Fernando
-                  </h3>
-
-                  <p className="text-sm text-gray-500">
-                    Operating Systems
-                  </p>
-                </div>
-
-                <span className="text-sm text-emerald-600">
-                  Checked
-                </span>
-
-              </div>
-
-            </div>
-
-
-            {/* Submission 3 */}
-            <div className="py-4">
-
-              <div className="flex justify-between">
-
-                <div>
-                  <h3 className="font-semibold text-gray-800">
-                    Tharushi Silva
-                  </h3>
-
-                  <p className="text-sm text-gray-500">
-                    Computer Networks
-                  </p>
-                </div>
-
-                <span className="text-sm text-orange-500">
-                  Pending
-                </span>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
-
-          <h2 className="text-xl font-semibold text-gray-800 mb-5">
-            Quick Actions
-          </h2>
-
-          <div className="flex flex-wrap gap-4">
-
-            <button className="px-5 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700" onClick={() => navigate("/assignments/new")}>
-              + Create Assignment
-            </button>
-
-            <button className="px-5 py-3 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200" onClick={() => navigate("/submissions")}>
-              View Submissions
-            </button>
-
-            <button className="px-5 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200" onClick={() => navigate("/similarity-check")}>
-              Check Similarity
-            </button>
-
-            <button className="px-5 py-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200" onClick={() => navigate("/reports")}>
-              Generate Report
-            </button>
-
-          </div>
-
-        </div>
-
+      <div className="app-sidebar-foot"><div className="mb-3 truncate font-medium text-gray-300">{user?.username || "Lecturer"}</div><button onClick={logout} className="text-amber-400">Sign out ↗</button></div>
+    </aside>
+    <div className="app-main"><header className="app-topbar">Dashboard <span className="ml-auto hidden text-sm font-normal text-gray-500 sm:block">Assignment integrity workspace</span></header>
+      <main className="app-content mx-auto max-w-7xl">
+        <header className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-sm font-medium text-amber-400">LECTURER OVERVIEW</p><h1 className="mt-2 text-3xl font-bold text-gray-800">Welcome, {user?.username || "Lecturer"}</h1><p className="mt-1 text-gray-600">Manage question papers, submissions, and similarity reviews.</p></div><button onClick={() => navigate("/assignments/new")} className="rounded-lg bg-emerald-600 px-5 py-3 text-white">+ Upload question paper</button></header>
+        {error && <p role="alert" className="mt-5 rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
+        <section className="mt-7 grid gap-4 md:grid-cols-3"><div className="rounded-xl border border-white/5 bg-white p-5"><p className="text-gray-500">Assignments</p><strong className="text-3xl text-emerald-700">{assignments.length}</strong></div><div className="rounded-xl border border-white/5 bg-white p-5"><p className="text-gray-500">Submissions</p><strong className="text-3xl text-blue-700">{submissions.length}</strong></div><div className="rounded-xl border border-white/5 bg-white p-5"><p className="text-gray-500">Questions needing review</p><strong className="text-3xl text-amber-600">{assignments.reduce((sum, item) => sum + item.pendingQuestions, 0)}</strong></div></section>
+        <section className="mt-7 rounded-xl border border-white/5 bg-white p-5 shadow-sm"><div className="mb-2 flex items-center justify-between"><div><h2 className="text-xl font-semibold">Your assignments</h2><p className="mt-1 text-sm text-gray-500">Continue reviewing or open a published assignment.</p></div><Link to="/assignments" className="text-emerald-700">View all →</Link></div>{assignments.map((item) => <div key={item.id} className="flex flex-wrap justify-between gap-3 border-b py-4"><div><strong>{item.title}</strong><p className="text-sm text-gray-500">{item.questionCount} questions · {item.status}</p></div><Link to={`/assignment/${item.id}`} className="self-center text-emerald-700">{item.status === "review" ? "Review questions →" : "Open →"}</Link></div>)}{!assignments.length && !error && <p className="mt-4 text-gray-600">Upload your first question paper to start.</p>}</section>
       </main>
-
     </div>
-  );
+  </div>;
 }
-
-export default LecturerDashboard;

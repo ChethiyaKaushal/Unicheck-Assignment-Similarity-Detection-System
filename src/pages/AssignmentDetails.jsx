@@ -1,310 +1,103 @@
-
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { api } from "../lib/api";
 
-function AssignmentDetails() {
-
-  const navigate = useNavigate();
+export default function AssignmentDetails() {
   const { id } = useParams();
-
-  return (
-    <div className="flex min-h-screen bg-emerald-50">
-
-      {/* Sidebar */}
-      <nav className="flex flex-col w-64 min-h-screen bg-white p-6 shadow-md">
-
-        <h2 className="text-2xl font-bold text-emerald-700 mb-2">
-          UniCheck
-        </h2>
-
-        <p className="text-sm text-gray-500 mb-8">
-          Lecturer Panel
-        </p>
-
-        {/* Navigation */}
-        <div className="flex flex-col gap-2">
-
-          <button
-            onClick={() => navigate("/lecturer-dashboard")}
-            className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50"
-          >
-            Dashboard
-          </button>
-
-          <button
-            className="text-left px-4 py-3 rounded-lg bg-emerald-100 text-emerald-700 font-medium"
-          >
-            Assignments
-          </button>
-
-          <button
-            className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50"
-           onClick={() => navigate("/submissions")}>
-            Submissions
-          </button>
-
-          <button
-            className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50"
-           onClick={() => navigate("/similarity-check")}>
-            Similarity Check
-          </button>
-
-          <button
-            className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50"
-           onClick={() => navigate("/reports")}>
-            Reports
-          </button>
-
-        </div>
-
-        {/* Bottom */}
-        <div className="mt-auto">
-
-          <button
-            className="w-full text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50 mb-2"
-           onClick={() => navigate("/profile")}>
-            Profile
-          </button>
-
-          <button
-            onClick={() => navigate("/login")}
-            className="w-full text-left px-4 py-3 rounded-lg text-red-500 hover:bg-red-50"
-          >
-            Logout
-          </button>
-
-        </div>
-
-      </nav>
-
-
-      {/* Main Content */}
-      <main className="flex-1 p-8">
-
-        {/* Back button */}
-        <button
-          onClick={() => navigate("/lecturer-dashboard")}
-          className="text-emerald-600 hover:text-emerald-800 mb-6"
-        >
-          ← Back to Dashboard
-        </button>
-
-
-        {/* Assignment Header */}
-        <div className="bg-white rounded-xl shadow-sm p-8 mb-6">
-
-          <div className="flex justify-between items-start">
-
-            <div>
-
-              <p className="text-sm text-emerald-600 font-medium mb-2">
-                Database Management
-              </p>
-
-              <h1 className="text-3xl font-bold text-gray-800">
-                Database Assignment 01
-              </h1>
-
-              <p className="text-gray-500 mt-2">
-                Introduction to Relational Database Management Systems
-              </p>
-
-            </div>
-
-            <span className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full text-sm font-medium">
-              Active
-            </span>
-
-          </div>
-
-        </div>
-
-
-        {/* Assignment Information */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-
-          {/* Deadline */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-
-            <p className="text-sm text-gray-500">
-              Deadline
-            </p>
-
-            <h2 className="text-xl font-semibold text-gray-800 mt-2">
-              30 September 2026
-            </h2>
-
-          </div>
-
-
-          {/* Submissions */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-
-            <p className="text-sm text-gray-500">
-              Submissions
-            </p>
-
-            <h2 className="text-xl font-semibold text-gray-800 mt-2">
-              32 / 45
-            </h2>
-
-          </div>
-
-
-          {/* Status */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-
-            <p className="text-sm text-gray-500">
-              Assignment Status
-            </p>
-
-            <h2 className="text-xl font-semibold text-emerald-600 mt-2">
-              Active
-            </h2>
-
-          </div>
-
-        </div>
-
-
-        {/* Description */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Assignment Description
-          </h2>
-
-          <p className="text-gray-600 leading-7">
-            Students are required to design a relational database
-            for a given scenario. The assignment covers entity
-            identification, relational schemas, primary keys,
-            foreign keys and normalization.
-          </p>
-
-        </div>
-
-
-        {/* Questions */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-
-          <h2 className="text-xl font-semibold text-gray-800 mb-5">
-            Assignment Questions
-          </h2>
-
-
-          {/* Question 01 */}
-          <div className="border border-gray-200 rounded-lg p-5 mb-4">
-
-            <div className="flex justify-between">
-
-              <h3 className="font-semibold text-gray-800">
-                Question 01
-              </h3>
-
-              <span className="text-sm text-gray-500">
-                20 Marks
-              </span>
-
-            </div>
-
-            <p className="text-gray-600 mt-3">
-              Explain the concept of database normalization and
-              describe the first three normal forms with suitable
-              examples.
-            </p>
-
-          </div>
-
-
-          {/* Question 02 */}
-          <div className="border border-gray-200 rounded-lg p-5 mb-4">
-
-            <div className="flex justify-between">
-
-              <h3 className="font-semibold text-gray-800">
-                Question 02
-              </h3>
-
-              <span className="text-sm text-gray-500">
-                30 Marks
-              </span>
-
-            </div>
-
-            <p className="text-gray-600 mt-3">
-              Design a relational database schema for a university
-              course registration system. Identify the entities,
-              attributes and relationships.
-            </p>
-
-          </div>
-
-
-          {/* Question 03 */}
-          <div className="border border-gray-200 rounded-lg p-5">
-
-            <div className="flex justify-between">
-
-              <h3 className="font-semibold text-gray-800">
-                Question 03
-              </h3>
-
-              <span className="text-sm text-gray-500">
-                50 Marks
-              </span>
-
-            </div>
-
-            <p className="text-gray-600 mt-3">
-              Convert the given unnormalized data into a normalized
-              relational database structure and explain each step.
-            </p>
-
-          </div>
-
-        </div>
-
-
-        {/* Actions */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-
-          <h2 className="text-xl font-semibold text-gray-800 mb-5">
-            Assignment Actions
-          </h2>
-
-          <div className="flex flex-wrap gap-4">
-
-            <button
-              className="px-5 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-             onClick={() => navigate("/submissions")}>
-              View Submissions
-            </button>
-
-            <button
-              className="px-5 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
-             onClick={() => navigate("/similarity-check")}>
-              Check Similarity
-            </button>
-
-            <button
-              className="px-5 py-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
-             onClick={() => navigate("/reports")}>
-              Generate Report
-            </button>
-
-            <button
-              className="px-5 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-             onClick={() => navigate("/assignment/" + id + "/edit")}>
-              Edit Assignment
-            </button>
-
-          </div>
-
-        </div>
-
-      </main>
-
-    </div>
-  );
+  const navigate = useNavigate();
+  const [assignment, setAssignment] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState("");
+
+  async function refresh() {
+    const data = await api(`/assignments/${id}`);
+    setAssignment(data.assignment);
+    setQuestions(data.questions);
+  }
+
+  useEffect(() => {
+    let active = true;
+    api(`/assignments/${id}`)
+      .then((data) => {
+        if (!active) return;
+        setAssignment(data.assignment);
+        setQuestions(data.questions);
+      })
+      .catch((issue) => { if (active) setError(issue.message); });
+    return () => { active = false; };
+  }, [id]);
+
+  function change(questionId, key, value) {
+    setQuestions((current) => current.map((question) => question.id === questionId ? { ...question, [key]: value } : question));
+  }
+
+  function questionBody(question) {
+    return {
+      questionNumber: question.questionNumber,
+      questionText: question.questionText,
+      marks: question.marks === "" ? null : question.marks,
+    };
+  }
+
+  async function save(question) {
+    setBusy(question.id); setError(""); setMessage("");
+    try {
+      await api(`/assignments/${id}/questions/${question.id}`, { method: "PATCH", body: questionBody(question) });
+      setMessage(`${question.questionNumber} saved. Verify it when the wording is correct.`);
+      await refresh();
+    } catch (issue) { setError(issue.message); }
+    finally { setBusy(""); }
+  }
+
+  async function verify(question) {
+    setBusy(question.id); setError(""); setMessage("");
+    try {
+      const result = await api(`/assignments/${id}/questions/${question.id}`, { method: "PATCH", body: questionBody(question) });
+      await api(`/assignments/${id}/questions/${result.question.id}/verify`, { method: "POST" });
+      setMessage(`${question.questionNumber} verified.`);
+      await refresh();
+    } catch (issue) { setError(issue.message); }
+    finally { setBusy(""); }
+  }
+
+  async function verifyAll() {
+    setBusy("all"); setError(""); setMessage("");
+    try {
+      await Promise.all(questions.map((question) => api(`/assignments/${id}/questions/${question.id}`, { method: "PATCH", body: questionBody(question) })));
+      const result = await api(`/assignments/${id}/questions/verify-all`, { method: "POST" });
+      setMessage(result.message);
+      await refresh();
+    } catch (issue) { setError(issue.message); }
+    finally { setBusy(""); }
+  }
+
+  async function publish() {
+    setBusy("publish"); setError(""); setMessage("");
+    try {
+      const result = await api(`/assignments/${id}/publish`, { method: "POST" });
+      setMessage(result.message);
+      await refresh();
+    } catch (issue) { setError(issue.message); }
+    finally { setBusy(""); }
+  }
+
+  if (error && !assignment) {
+    return <main className="min-h-screen bg-emerald-50 p-8"><p role="alert" className="rounded-lg bg-red-50 p-4 text-red-700">{error}</p><button onClick={() => navigate("/assignments")} className="mt-4 text-emerald-700">Back to assignments</button></main>;
+  }
+
+  const verifiedCount = questions.filter((question) => question.verificationStatus === "verified").length;
+  const canReview = assignment?.status === "review";
+
+  return <div className="min-h-screen bg-emerald-50 p-5 md:p-8"><main className="mx-auto max-w-5xl">
+    <button onClick={() => navigate("/assignments")} className="mb-5 text-emerald-700">← Assignments</button>
+    <header className="mb-6 rounded-xl bg-white p-6 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-bold text-gray-800">{assignment?.title || "Loading assignment…"}</h1><p className="mt-2 text-gray-600">{assignment?.description}</p></div><span className="rounded-full bg-emerald-50 px-3 py-1 text-sm capitalize text-emerald-700">{assignment?.status}</span></div></header>
+    {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
+    {message && <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-3 text-emerald-700">{message}</p>}
+    <section className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold text-gray-800">Questions to review ({questions.length})</h2>{canReview && <span className="text-sm text-gray-600">{verifiedCount} of {questions.length} verified</span>}</section>
+    <div className="space-y-4">{questions.map((question, index) => <article key={question.id} className="rounded-xl bg-white p-5 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-3"><label className="text-sm font-medium text-gray-600">Question label<input value={question.questionNumber} onChange={(event) => change(question.id, "questionNumber", event.target.value)} disabled={!canReview} className="ml-3 w-36 rounded border p-2 text-gray-800" /></label><label className="text-sm text-gray-600">Marks<input type="number" min="0" value={question.marks ?? ""} onChange={(event) => change(question.id, "marks", event.target.value)} disabled={!canReview} className="ml-2 w-24 rounded border p-2" /></label><span className="text-xs text-gray-500">Block {index + 1} of {questions.length}</span><span className={`rounded-full px-3 py-1 text-xs ${question.verificationStatus === "verified" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{question.verificationStatus}</span></div><textarea rows="3" value={question.questionText} onChange={(event) => change(question.id, "questionText", event.target.value)} disabled={!canReview} className="mt-4 w-full rounded-lg border p-3 text-gray-700 disabled:bg-gray-50" />{canReview && <div className="mt-3 flex gap-3"><button disabled={Boolean(busy)} onClick={() => save(question)} className="rounded-lg border px-4 py-2 text-emerald-700 disabled:opacity-50">Save</button><button disabled={Boolean(busy)} onClick={() => verify(question)} className="rounded-lg bg-emerald-600 px-4 py-2 text-white disabled:opacity-50">{busy === question.id ? "Saving…" : "Save and verify"}</button></div>}</article>)}</div>
+    {!questions.length && assignment && <p className="rounded-xl bg-white p-5">No non-empty questions were extracted. Check the PDF and try uploading it again.</p>}
+    {canReview && <div className="mt-6 rounded-xl bg-white p-5"><p className="mb-3 text-sm text-gray-600">Review the wording above. You can verify each block individually or verify all {questions.length} blocks together.</p><div className="flex flex-wrap gap-3"><button disabled={Boolean(busy) || questions.length === 0} onClick={verifyAll} className="rounded-lg border border-emerald-700 px-5 py-3 text-emerald-800 disabled:cursor-not-allowed disabled:opacity-40">{busy === "all" ? "Verifying all…" : `Verify all ${questions.length} questions`}</button><button disabled={Boolean(busy) || questions.length === 0 || verifiedCount !== questions.length} onClick={publish} className="rounded-lg bg-emerald-700 px-5 py-3 text-white disabled:cursor-not-allowed disabled:opacity-40">{busy === "publish" ? "Publishing…" : "Publish assignment"}</button></div></div>}
+  </main></div>;
 }
-
-export default AssignmentDetails;

@@ -1,82 +1,38 @@
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { api } from "../lib/api";
 
-const assignments = [
-  { id: "1", title: "Database Assignment 01", module: "Database Systems", due: "28 Sep 2026" },
-  { id: "2", title: "Operating Systems Assignment 01", module: "Operating Systems", due: "02 Oct 2026" },
-  { id: "3", title: "Networks Assignment 01", module: "Computer Networks", due: "08 Oct 2026" },
-];
-function readCreatedAssignments() {
-  try { return JSON.parse(localStorage.getItem("unicheckDemoAssignments") || "[]"); }
-  catch { return []; }
-}
 function PageFrame({ title, subtitle, children }) {
   const navigate = useNavigate();
-  return <div className="min-h-screen bg-emerald-50 p-6 md:p-10"><main className="mx-auto max-w-5xl">
-    <button onClick={() => navigate(-1)} className="mb-5 text-emerald-700 hover:underline">← Back</button>
-    <h1 className="text-3xl font-bold text-gray-800">{title}</h1>{subtitle && <p className="mt-2 text-gray-600">{subtitle}</p>}
-    <div className="mt-6">{children}</div>
-  </main></div>;
+  return <div className="min-h-screen bg-emerald-50 p-5 md:p-8"><main className="mx-auto max-w-5xl"><button onClick={() => navigate(-1)} className="mb-5 text-emerald-700 hover:underline">← Back</button><h1 className="text-3xl font-bold text-gray-800">{title}</h1>{subtitle && <p className="mt-2 text-gray-600">{subtitle}</p>}<div className="mt-6">{children}</div></main></div>;
 }
+function Notice({ error, message }) { return <>{error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}{message && <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-3 text-emerald-700">{message}</p>}</>; }
+
 export function AssignmentsPage() {
-  const navigate = useNavigate();
-  const all = [...readCreatedAssignments(), ...assignments];
-  return <PageFrame title="Assignments" subtitle="Sample assignments for this frontend demo.">
-    <div className="mb-5 flex justify-end"><button onClick={() => navigate("/assignments/new")} className="rounded-lg bg-emerald-600 px-5 py-3 text-white">+ Create Assignment</button></div>
-    <div className="space-y-4">{all.map((item) => <article key={item.id} className="rounded-xl bg-white p-5 shadow-sm flex justify-between items-center gap-4">
-      <div><h2 className="font-semibold text-gray-800">{item.title}</h2><p className="mt-1 text-sm text-gray-500">{item.module} · Due {item.due}</p></div>
-      <button onClick={() => navigate("/assignment/" + item.id)} className="rounded-lg border border-emerald-200 px-4 py-2 text-emerald-700">View details</button>
-    </article>)}</div>
+  const navigate = useNavigate(); const [assignments, setAssignments] = useState([]); const [error, setError] = useState("");
+  useEffect(() => { api("/assignments").then((data) => setAssignments(data.assignments)).catch((issue) => setError(issue.message)); }, []);
+  return <PageFrame title="Assignments" subtitle="Review extracted questions and publish verified assignments."><Notice error={error} /><div className="mb-5 flex justify-end"><button onClick={() => navigate("/assignments/new")} className="rounded-lg bg-emerald-600 px-5 py-3 text-white">+ Upload question paper</button></div>
+    {assignments.length === 0 && !error && <p className="rounded-xl bg-white p-6 text-gray-600">No assignments yet. Upload a question-paper PDF to begin.</p>}
+    <div className="space-y-4">{assignments.map((item) => <article key={item.id} className="rounded-xl bg-white p-5 shadow-sm flex flex-wrap justify-between items-center gap-4"><div><h2 className="font-semibold text-gray-800">{item.title}</h2><p className="mt-1 text-sm text-gray-500">{item.questionCount} questions · {item.status} · {item.pendingQuestions} need verification</p></div><button onClick={() => navigate(`/assignment/${item.id}`)} className="rounded-lg border border-emerald-200 px-4 py-2 text-emerald-700">{item.status === "review" ? "Review questions" : "View report"}</button></article>)}</div>
   </PageFrame>;
 }
+
 export function CreateAssignmentPage() {
-  const navigate = useNavigate();
-  const { id: editId } = useParams();
-  const existing = editId ? [...readCreatedAssignments(), ...assignments].find((item) => item.id === editId) : null;
-  function handleSubmit(event) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const item = { id: editId || "demo-" + Date.now(), title: form.get("title"), module: form.get("module"), due: form.get("dueDate") };
-    const saved = readCreatedAssignments().filter((assignment) => assignment.id !== item.id);
-    localStorage.setItem("unicheckDemoAssignments", JSON.stringify([item, ...saved]));
-    navigate("/assignments");
-  }
-  return <PageFrame title={editId ? "Edit Assignment" : "Create Assignment"} subtitle="Changes are saved in this browser only for the frontend demo.">
-    <form onSubmit={handleSubmit} className="max-w-2xl space-y-5 rounded-xl bg-white p-6 shadow-sm">
-      <label className="block text-sm font-medium text-gray-700">Assignment title<input name="title" required defaultValue={existing?.title || ""} className="mt-2 w-full rounded-lg border p-3" placeholder="e.g. Database Assignment 02" /></label>
-      <label className="block text-sm font-medium text-gray-700">Module<input name="module" required defaultValue={existing?.module || ""} className="mt-2 w-full rounded-lg border p-3" placeholder="e.g. Database Systems" /></label>
-      <label className="block text-sm font-medium text-gray-700">Due date<input name="dueDate" type="date" required defaultValue={existing?.due || ""} className="mt-2 w-full rounded-lg border p-3" /></label>
-      <div className="flex gap-3"><button type="submit" className="rounded-lg bg-emerald-600 px-5 py-3 text-white">{editId ? "Save changes" : "Save assignment"}</button><button type="button" onClick={() => navigate("/assignments")} className="rounded-lg border px-5 py-3">Cancel</button></div>
-    </form>
-  </PageFrame>;
+  const navigate = useNavigate(); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  async function handleSubmit(event) { event.preventDefault(); setError(""); setBusy(true); const form = new FormData(event.currentTarget); try { const result = await api("/upload/question-paper", { method: "POST", body: form }); navigate(`/assignment/${result.assignment.id}`, { replace: true }); } catch (issue) { setError(issue.message); } finally { setBusy(false); } }
+  return <PageFrame title="Upload question paper" subtitle="UniCheck extracts the question hierarchy. Check and verify every question before publishing."><Notice error={error} /><form onSubmit={handleSubmit} className="max-w-2xl space-y-5 rounded-xl bg-white p-6 shadow-sm"><label className="block text-sm font-medium text-gray-700">Assignment title<input name="title" required maxLength="120" className="mt-2 w-full rounded-lg border p-3" placeholder="e.g. Machine Learning Exam" /></label><label className="block text-sm font-medium text-gray-700">Description<textarea name="description" rows="3" className="mt-2 w-full rounded-lg border p-3" /></label><label className="block text-sm font-medium text-gray-700">Question-paper PDF<input name="pdf" type="file" accept="application/pdf,.pdf" required className="mt-2 block w-full rounded-lg border p-3" /></label><p className="text-xs text-gray-500">PDF only, up to 10 MB. The file is stored privately.</p><button disabled={busy} className="rounded-lg bg-emerald-600 px-5 py-3 text-white disabled:opacity-60">{busy ? "Extracting questions…" : "Upload and extract questions"}</button></form></PageFrame>;
 }
-export function ModuleDetailsPage() {
-  const { moduleId } = useParams();
-  const navigate = useNavigate();
-  const name = decodeURIComponent(moduleId || "").replaceAll("-", " ");
-  const matching = assignments.filter((item) => item.module.toLowerCase() === name.toLowerCase());
-  return <PageFrame title={name || "Module"} subtitle="Sample module page">
-    <section className="rounded-xl bg-white p-6 shadow-sm"><h2 className="text-xl font-semibold">Assignments for this module</h2><p className="mt-2 text-gray-600">Module content is sample frontend data.</p>
-      {matching.map((item) => <div key={item.id} className="mt-5 flex justify-between border-t pt-4"><span>{item.title}</span><button onClick={() => navigate("/assignment/" + item.id)} className="text-emerald-700">Open</button></div>)}
-      <button onClick={() => navigate("/student/assignments")} className="mt-6 rounded-lg bg-emerald-600 px-4 py-2 text-white">All my assignments</button>
-    </section>
-  </PageFrame>;
-}
+
 export function StudentAreaPage({ kind }) {
-  const navigate = useNavigate();
-  const content = {
-    assignments: { title: "My Assignments", subtitle: "Assignments available in this demo.", rows: assignments },
-    submissions: { title: "My Submissions", subtitle: "Sample submission history.", rows: [{ title: "Database Assignment 01", status: "Submitted" }, { title: "Operating Systems Assignment 01", status: "Under review" }] },
-    results: { title: "My Results", subtitle: "Sample similarity results.", rows: [{ title: "Database Assignment 01", status: "Similarity: 18%" }, { title: "Operating Systems Assignment 01", status: "Similarity: 7%" }] },
-  }[kind];
-  return <PageFrame title={content.title} subtitle={content.subtitle}><div className="space-y-4">
-    {content.rows.map((row) => <article key={row.title} className="flex items-center justify-between gap-4 rounded-xl bg-white p-5 shadow-sm"><div><h2 className="font-semibold text-gray-800">{row.title}</h2><p className="mt-1 text-sm text-gray-500">{row.module || row.status || row.due}</p></div>{kind === "assignments" && <button onClick={() => navigate("/assignment/" + row.id)} className="rounded-lg border px-4 py-2 text-emerald-700">View assignment</button>}</article>)}
-  </div></PageFrame>;
+  const [assignments, setAssignments] = useState([]); const [submissions, setSubmissions] = useState([]); const [error, setError] = useState(""); const [message, setMessage] = useState(""); const [busy, setBusy] = useState("");
+  useEffect(() => { let active = true; const request = kind === "assignments" ? api("/assignments/published").then((data) => { if (active) setAssignments(data.assignments); }) : api("/submissions/mine").then((data) => { if (active) setSubmissions(data.submissions); }); request.catch((issue) => { if (active) setError(issue.message); }); return () => { active = false; }; }, [kind]);
+  async function submit(event, assignmentId) { event.preventDefault(); setError(""); setMessage(""); setBusy(assignmentId); const formElement = event.currentTarget; const form = new FormData(formElement); try { const result = await api(`/submissions/${assignmentId}`, { method: "POST", body: form }); setMessage(`${result.message} ${result.submission.mappedAnswers} answers mapped; status: ${result.submission.status}.`); formElement.reset(); } catch (issue) { setError(issue.message); } finally { setBusy(""); } }
+  const title = kind === "assignments" ? "Available Assignments" : kind === "submissions" ? "My Submissions" : "My Results";
+  return <PageFrame title={title} subtitle={kind === "assignments" ? "Upload a labelled answer PDF for a published assignment." : "Your submitted work and processing status."}><Notice error={error} message={message} />
+    {kind === "assignments" ? assignments.length === 0 ? <div className="rounded-xl bg-white p-6 text-gray-600">There are no published assignments yet.</div> : <div className="space-y-4">{assignments.map((item) => <article key={item.id} className="rounded-xl bg-white p-5 shadow-sm"><h2 className="font-semibold text-gray-800">{item.title}</h2><p className="mt-1 text-sm text-gray-500">{item.description || "No description"} · Lecturer: {item.lecturer}</p><form onSubmit={(event) => submit(event, item.id)} className="mt-4 flex flex-wrap items-center gap-3"><input name="pdf" type="file" accept="application/pdf,.pdf" required className="max-w-full rounded-lg border p-2" /><button disabled={busy === item.id} className="rounded-lg bg-emerald-600 px-4 py-2 text-white">{busy === item.id ? "Uploading…" : "Submit answers"}</button></form><p className="mt-2 text-xs text-gray-500">Label responses with question numbers such as Q1, Q2(a), or Q2(a)(i).</p></article>)}</div> : submissions.length === 0 ? <div className="rounded-xl bg-white p-6 text-gray-600">No submissions yet.</div> : <div className="space-y-3">{submissions.map((item) => <article key={item.id} className="flex flex-wrap justify-between gap-2 rounded-xl bg-white p-5"><span className="font-medium">{item.assignmentTitle}</span><span className="text-gray-600">{item.status} · {item.answerCount} mapped answers</span></article>)}</div>}
+  </PageFrame>;
 }
-export function ReportDetailPage() {
-  const { reportId } = useParams();
-  return <PageFrame title="Similarity Report" subtitle={"Demo report " + reportId}><div className="rounded-xl bg-white p-6 shadow-sm"><p className="text-gray-700">Sample report preview. Similarity score: <strong>82%</strong>.</p><p className="mt-3 text-sm text-gray-500">No document was analyzed or uploaded.</p></div></PageFrame>;
-}
-export function NotFoundPage() {
-  const navigate = useNavigate();
-  return <PageFrame title="Page not found" subtitle="That screen is not part of this demo yet."><button onClick={() => navigate("/login")} className="rounded-lg bg-emerald-600 px-5 py-3 text-white">Go to Login</button></PageFrame>;
-}
+
+export function ModuleDetailsPage() { return <PageFrame title="Modules" subtitle="Module pages are not part of the live MVP yet."><p className="rounded-xl bg-white p-6">Use Available Assignments to view active work.</p></PageFrame>; }
+export function ReportDetailPage() { const { reportId } = useParams(); return <PageFrame title="Similarity report" subtitle={`Assignment ${reportId}`}><p className="rounded-xl bg-white p-6">Choose Reports from the lecturer dashboard to load question-by-question comparisons.</p></PageFrame>; }
+export function NotFoundPage() { return <PageFrame title="Page not found"><a className="text-emerald-700 underline" href="/login">Go to sign in</a></PageFrame>; }

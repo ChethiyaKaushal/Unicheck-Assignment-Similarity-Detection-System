@@ -1,0 +1,15 @@
+const express = require("express");
+const auth = require("../middleware/authMiddleware");
+const roles = require("../middleware/roleMiddleware");
+const controller = require("../controllers/assignmentController");
+const router = express.Router();
+router.use(auth);
+router.get("/published", roles("student"), controller.listPublishedAssignments);
+router.get("/", roles("lecturer"), controller.listLecturerAssignments);
+router.get("/:assignmentId", roles("lecturer"), controller.getLecturerAssignment);
+router.patch("/:assignmentId/questions/:questionId", roles("lecturer"), controller.updateQuestion);
+router.post("/:assignmentId/questions/:questionId/verify", roles("lecturer"), controller.verifyQuestion);
+router.post("/:assignmentId/questions/verify-all", roles("lecturer"), controller.verifyAllQuestions);
+router.post("/:assignmentId/publish", roles("lecturer"), controller.publishAssignment);
+router.get("/:assignmentId/report", roles("lecturer"), controller.getSimilarityReport);
+module.exports = router;

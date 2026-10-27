@@ -15,9 +15,9 @@ const questionSchema = new mongoose.Schema(
         },
 
         questionText: {
-            type: String,
-            required: true,
-            trim: true
+        type: String,
+        trim: true,
+        default: ""
         },
 
         parentQuestionId: {
