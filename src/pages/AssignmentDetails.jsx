@@ -14,10 +14,12 @@ export default function AssignmentDetails() {
   const navigate = useNavigate();
   const [assignment, setAssignment] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [modules, setModules] = useState([]);
+  const [newQuestion, setNewQuestion] = useState({ questionNumber: "", questionText: "" });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState("");
-  const [settings, setSettings] = useState({ moduleCode: "", moduleName: "", dueAt: "", durationMinutes: "" });
+  const [settings, setSettings] = useState({ moduleId: "", dueAt: "" });
   const activeQuestions = useMemo(() => questions.filter((question) => question.verificationStatus !== "rejected"), [questions]);
   const rejectedQuestions = useMemo(() => questions.filter((question) => question.verificationStatus === "rejected"), [questions]);
 
@@ -25,17 +27,18 @@ export default function AssignmentDetails() {
     const data = await api(`/assignments/${id}`);
     setAssignment(data.assignment);
     setQuestions(data.questions);
-    setSettings({ moduleCode: data.assignment.moduleCode || "", moduleName: data.assignment.moduleName || "", dueAt: toLocalDateTime(data.assignment.dueAt), durationMinutes: data.assignment.durationMinutes ?? "" });
+    setSettings({ moduleId: data.assignment.moduleId || "", dueAt: toLocalDateTime(data.assignment.dueAt) });
   }
 
   useEffect(() => {
+    api("/modules").then((data) => setModules(data.modules)).catch((issue) => setError(issue.message));
     let active = true;
     api(`/assignments/${id}`)
       .then((data) => {
         if (!active) return;
         setAssignment(data.assignment);
         setQuestions(data.questions);
-        setSettings({ moduleCode: data.assignment.moduleCode || "", moduleName: data.assignment.moduleName || "", dueAt: toLocalDateTime(data.assignment.dueAt), durationMinutes: data.assignment.durationMinutes ?? "" });
+        setSettings({ moduleId: data.assignment.moduleId || "", dueAt: toLocalDateTime(data.assignment.dueAt) });
       })
       .catch((issue) => { if (active) setError(issue.message); });
     return () => { active = false; };
@@ -49,14 +52,19 @@ export default function AssignmentDetails() {
     event.preventDefault(); setBusy("settings"); setError(""); setMessage("");
     try {
       const result = await api(`/assignments/${id}/settings`, { method: "PATCH", body: {
-        moduleCode: settings.moduleCode, moduleName: settings.moduleName,
+        moduleId: settings.moduleId,
         dueAt: settings.dueAt ? new Date(settings.dueAt).toISOString() : null,
-        durationMinutes: settings.durationMinutes === "" ? null : Number(settings.durationMinutes)
       } });
       setAssignment((current) => ({ ...current, ...result.assignment }));
       setMessage("Module and timing details saved to UniCheck.");
     } catch (issue) { setError(issue.message); }
     finally { setBusy(""); }
+  }
+
+  async function addQuestion(event) {
+    event.preventDefault(); setBusy("add-question"); setError(""); setMessage("");
+    try { const result = await api(`/assignments/${id}/questions`, { method: "POST", body: newQuestion }); setMessage(`${result.question.questionNumber} question block added.`); setNewQuestion({ questionNumber: "", questionText: "" }); await refresh(); }
+    catch (issue) { setError(issue.message); } finally { setBusy(""); }
   }
 
   function change(questionId, key, value) {
@@ -139,10 +147,11 @@ export default function AssignmentDetails() {
   return <div className="min-h-screen bg-emerald-50 p-5 md:p-8"><main className="mx-auto max-w-5xl">
     <button onClick={() => navigate("/assignments")} className="mb-5 text-emerald-700">← Assignments</button>
     <header className="mb-6 rounded-xl bg-white p-6 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-bold text-gray-800">{assignment?.title || "Loading assignment…"}</h1><p className="mt-2 text-gray-600">{assignment?.description}</p></div><span className="rounded-full bg-emerald-50 px-3 py-1 text-sm capitalize text-emerald-700">{assignment?.status}</span></div></header>
-    {assignment && <form onSubmit={saveSettings} className="mb-6 rounded-xl border border-white/10 bg-white p-5"><div className="mb-4"><h2 className="font-semibold">Module and timing</h2><p className="mt-1 text-sm text-gray-500">Set the module filter and submission deadline students see on their dashboard. Duration is shown as expected exam time.</p></div><div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm text-gray-500">Module code<input value={settings.moduleCode} onChange={(event) => changeSetting("moduleCode", event.target.value)} maxLength="24" className="mt-1 w-full rounded-lg border p-3" placeholder="e.g. EE5253" /></label><label className="block text-sm text-gray-500">Module name<input value={settings.moduleName} onChange={(event) => changeSetting("moduleName", event.target.value)} maxLength="120" className="mt-1 w-full rounded-lg border p-3" placeholder="e.g. Machine Learning" /></label><label className="block text-sm text-gray-500">Submission deadline<input type="datetime-local" value={settings.dueAt} onChange={(event) => changeSetting("dueAt", event.target.value)} className="mt-1 w-full rounded-lg border p-3" /></label><label className="block text-sm text-gray-500">Expected duration (minutes)<input type="number" min="1" max="1440" value={settings.durationMinutes} onChange={(event) => changeSetting("durationMinutes", event.target.value)} className="mt-1 w-full rounded-lg border p-3" placeholder="Optional" /></label></div><button disabled={Boolean(busy)} className="mt-4 rounded-lg border border-emerald-700 px-4 py-2 text-emerald-700 disabled:opacity-50">{busy === "settings" ? "Saving…" : "Save module and timing"}</button></form>}
+    {assignment && <form onSubmit={saveSettings} className="mb-6 rounded-xl border border-white/10 bg-white p-5"><div className="mb-4"><h2 className="font-semibold">Module and deadline</h2><p className="mt-1 text-sm text-gray-500">Students must upload before the date and time shown here.</p></div><div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm text-gray-500">Module<select value={settings.moduleId} onChange={(event) => changeSetting("moduleId", event.target.value)} required className="mt-1 w-full rounded-lg border p-3">{modules.map((module) => <option key={module.id} value={module.id}>{module.code} · {module.name}</option>)}</select></label><label className="block text-sm text-gray-500">Upload deadline<input type="datetime-local" required value={settings.dueAt} onChange={(event) => changeSetting("dueAt", event.target.value)} className="mt-1 w-full rounded-lg border p-3" /></label></div><button disabled={Boolean(busy)} className="mt-4 rounded-lg border border-emerald-700 px-4 py-2 text-emerald-700 disabled:opacity-50">{busy === "settings" ? "Saving…" : "Save module and deadline"}</button></form>}
     {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
     {message && <p role="status" className="mb-4 rounded-lg bg-emerald-50 p-3 text-emerald-700">{message}</p>}
     <section className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold text-gray-800">Questions saved in UniCheck ({activeQuestions.length})</h2><p className="mt-1 text-sm text-gray-500">Loaded from the database. Labels and parent links are shown with each saved block.</p></div>{canReview && <span className="text-sm text-gray-600">{verifiedCount} of {activeQuestions.length} verified</span>}</section>
+    {canReview && <form onSubmit={addQuestion} className="mb-4 grid gap-3 rounded-xl bg-white p-5 sm:grid-cols-[10rem_1fr_auto]"><h2 className="font-semibold sm:col-span-3">Add question block</h2><input required value={newQuestion.questionNumber} onChange={(event) => setNewQuestion((current) => ({ ...current, questionNumber: event.target.value }))} className="rounded-lg border p-3" placeholder="e.g. Q31 or Q4(b)"/><input required value={newQuestion.questionText} onChange={(event) => setNewQuestion((current) => ({ ...current, questionText: event.target.value }))} className="rounded-lg border p-3" placeholder="Question text"/><button disabled={Boolean(busy)} className="rounded-lg bg-emerald-600 px-4 py-2 text-white disabled:opacity-50">{busy === "add-question" ? "Adding…" : "+ Add question"}</button></form>}
     <div className="space-y-4">{activeQuestions.map((question, index) => <article key={question.id} className="rounded-xl bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3"><label className="text-sm font-medium text-gray-600">Question label<input value={question.questionNumber} onChange={(event) => change(question.id, "questionNumber", event.target.value)} disabled={!canReview} className="ml-3 w-36 rounded border p-2 text-gray-800" /></label><span className="text-xs text-gray-500">Saved block {index + 1} of {activeQuestions.length}</span><span className={`rounded-full px-3 py-1 text-xs ${question.verificationStatus === "verified" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{question.verificationStatus === "verified" ? "Verified" : "Needs review"}</span></div>
       {question.parentQuestionNumber && <p className="mt-3 text-xs text-gray-500">Parent question: {question.parentQuestionNumber}</p>}

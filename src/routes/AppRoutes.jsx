@@ -9,14 +9,17 @@ import SubmissionDetails from "../pages/SubmissionDetails";
 import Reports from "../pages/Reports";
 import Profile from "../pages/Profile";
 import ChangePassword from "../pages/ChangePassword";
-import { AssignmentsPage, CreateAssignmentPage, ModuleDetailsPage, ReportDetailPage, NotFoundPage } from "../pages/FrontendPages";
+import { AssignmentsPage, CreateAssignmentPage, LecturerModulesPage, ModuleDetailsPage, ReportDetailPage, NotFoundPage } from "../pages/FrontendPages";
 import { currentUser } from "../lib/api";
+import AdminDashboard from "../pages/AdminDashboard";
+import BrandBar from "../components/BrandBar";
+import { dashboardPath } from "../lib/paths";
 
 function RoleRoute({ role, children }) {
   const user = currentUser();
   if (!user) return <Navigate to="/login" replace />;
   if (user.mustChangePassword) return <Navigate to="/change-password" replace />;
-  if (user.role !== role) return <Navigate to={user.role === "student" ? "/student-dashboard" : "/lecturer-dashboard"} replace />;
+  if (user.role !== role) return <Navigate to={dashboardPath(user.role)} replace />;
   return children;
 }
 
@@ -24,19 +27,21 @@ function HomeRedirect() {
   const user = currentUser();
   if (!user) return <Navigate to="/login" replace />;
   if (user.mustChangePassword) return <Navigate to="/change-password" replace />;
-  return <Navigate to={user.role === "student" ? "/student-dashboard" : "/lecturer-dashboard"} replace />;
+  return <Navigate to={dashboardPath(user.role)} replace />;
 }
 
 function AppRoutes() {
-  return <BrowserRouter><Routes>
+  return <BrowserRouter><BrandBar /><Routes>
     <Route path="/" element={<HomeRedirect />} />
     <Route path="/login" element={<Login />} />
     <Route path="/register" element={<Register />} />
     <Route path="/change-password" element={<ChangePassword />} />
     <Route path="/student-dashboard" element={<RoleRoute role="student"><StudentDashboard /></RoleRoute>} />
     <Route path="/lecturer-dashboard" element={<RoleRoute role="lecturer"><LecturerDashboard /></RoleRoute>} />
+    <Route path="/admin-dashboard" element={<RoleRoute role="admin"><AdminDashboard /></RoleRoute>} />
     <Route path="/assignments" element={<RoleRoute role="lecturer"><AssignmentsPage /></RoleRoute>} />
     <Route path="/assignments/new" element={<RoleRoute role="lecturer"><CreateAssignmentPage /></RoleRoute>} />
+    <Route path="/modules/manage" element={<RoleRoute role="lecturer"><LecturerModulesPage /></RoleRoute>} />
     <Route path="/modules/:moduleId" element={<ModuleDetailsPage />} />
     <Route path="/student/assignments" element={<RoleRoute role="student"><Navigate to="/student-dashboard?view=assignments" replace /></RoleRoute>} />
     <Route path="/student/submissions" element={<RoleRoute role="student"><Navigate to="/student-dashboard?view=submissions" replace /></RoleRoute>} />

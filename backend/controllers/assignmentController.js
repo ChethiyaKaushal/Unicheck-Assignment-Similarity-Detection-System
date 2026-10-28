@@ -1,8 +1,16 @@
 const mongoose = require("mongoose");
+const fs = require("fs/promises");
+const path = require("path");
 const Assignment = require("../models/Assignment");
 const Question = require("../models/Question");
 const Submission = require("../models/Submission");
 const { compareSubmissions } = require("../services/similarityService");
+const Module = require("../models/Module");
+const SimilarityReport = require("../models/SimilarityReport");
+const { extractPdfText } = require("../services/questionProcessingService");
+const { extractAnswers } = require("../services/answerExtractionService");
+const { compareAssignmentNow } = require("../services/similarityScheduler");
+const PRIVATE_UPLOAD_DIR = path.join(__dirname, "..", "private_uploads");
 
 const readyUser = (req, res) => {
     if (req.user.mustChangePassword) {
@@ -22,21 +30,77 @@ const publicQuestion = (question, parentQuestionNumber = null) => ({
 
 async function listLecturerAssignments(req, res) {
     if (!readyUser(req, res)) return;
-    const assignments = await Assignment.find({ lecturerId: req.user.userId }).sort({ createdAt: -1 }).lean();
+    const assignments = await Assignment.find({ lecturerId: req.user.userId, status: { $ne: "deleted" } }).sort({ createdAt: -1 }).lean();
     const ids = assignments.map((item) => item._id);
     const counts = await Question.aggregate([{ $match: { assignmentId: { $in: ids }, questionText: { $regex: "\\S" }, verificationStatus: { $ne: "rejected" } } }, { $group: { _id: "$assignmentId", count: { $sum: 1 }, pending: { $sum: { $cond: [{ $eq: ["$verificationStatus", "verified"] }, 0, 1] } } } }]);
     const byId = new Map(counts.map((item) => [String(item._id), item]));
-    return res.json({ assignments: assignments.map((item) => ({ ...item, id: String(item._id), questionCount: byId.get(String(item._id))?.count || 0, pendingQuestions: byId.get(String(item._id))?.pending || 0 })) });
+    const submissionCounts = await Submission.aggregate([{ $match: { assignmentId: { $in: ids } } }, { $group: { _id: "$assignmentId", count: { $sum: 1 } } }]);
+    const submissionsByAssignment = new Map(submissionCounts.map((item) => [String(item._id), item.count]));
+    const reports = await SimilarityReport.find({ assignmentId: { $in: ids }, status: "completed" }).select("assignmentId criticalPairCount pairsCompared completedAt").lean();
+    const reportById = new Map(reports.map((item) => [String(item.assignmentId), item]));
+    return res.json({ assignments: assignments.map((item) => ({ ...item, id: String(item._id), questionCount: byId.get(String(item._id))?.count || 0, pendingQuestions: byId.get(String(item._id))?.pending || 0, submissionCount: submissionsByAssignment.get(String(item._id)) || 0, similarityReport: reportById.get(String(item._id)) ? { criticalPairCount: reportById.get(String(item._id)).criticalPairCount, pairsCompared: reportById.get(String(item._id)).pairsCompared, completedAt: reportById.get(String(item._id)).completedAt } : null })) });
 }
 
 async function getLecturerAssignment(req, res) {
     if (!readyUser(req, res)) return;
     if (!validId(req.params.assignmentId)) return res.status(400).json({ message: "Invalid assignment id." });
-    const assignment = await Assignment.findOne({ _id: req.params.assignmentId, lecturerId: req.user.userId }).lean();
+    const assignment = await Assignment.findOne({ _id: req.params.assignmentId, lecturerId: req.user.userId, status: { $ne: "deleted" } }).lean();
     if (!assignment) return res.status(404).json({ message: "Assignment not found." });
     const questions = await Question.find({ assignmentId: assignment._id, questionText: { $regex: "\\S" } }).sort({ createdAt: 1, _id: 1 }).lean();
     const questionNumbers = new Map(questions.map((question) => [String(question._id), question.questionNumber]));
     return res.json({ assignment: { ...assignment, id: String(assignment._id) }, questions: questions.map((question) => publicQuestion(question, questionNumbers.get(String(question.parentQuestionId)) || null)) });
+}
+
+async function deleteAssignment(req, res) {
+    if (!readyUser(req, res)) return;
+    const { assignmentId } = req.params;
+    if (!validId(assignmentId)) return res.status(400).json({ message: "Invalid assignment id." });
+    const current = await Assignment.findOne({ _id: assignmentId, lecturerId: req.user.userId, status: { $ne: "deleted" } }).select("status similarityStatus").lean();
+    if (!current) return res.status(404).json({ message: "Assignment not found." });
+    if (current.status === "processing" || current.similarityStatus === "processing") return res.status(409).json({ message: "Wait for processing to finish before deleting this assignment." });
+    const assignment = await Assignment.findOneAndUpdate(
+        { _id: assignmentId, lecturerId: req.user.userId, status: { $ne: "deleted" }, similarityStatus: { $ne: "processing" } },
+        { $set: { status: "deleted" } },
+        { new: true }
+    );
+    if (!assignment) return res.status(409).json({ message: "This assignment is being processed. Try again when it finishes." });
+
+    const submissions = await Submission.find({ assignmentId }).select("pdfFile").lean();
+    const questionPaperPath = assignment.questionPaper;
+    const questionCount = await Question.countDocuments({ assignmentId });
+    const safeUnlink = async (storedPath) => {
+        if (!storedPath) return;
+        const resolved = path.resolve(__dirname, "..", storedPath);
+        const root = path.resolve(PRIVATE_UPLOAD_DIR);
+        if (resolved.startsWith(root + path.sep)) await fs.unlink(resolved).catch(() => {});
+    };
+    await Promise.all([
+        Question.deleteMany({ assignmentId }),
+        Submission.deleteMany({ assignmentId }),
+        SimilarityReport.deleteOne({ assignmentId })
+    ]);
+    await Promise.all([safeUnlink(questionPaperPath), ...submissions.map((item) => safeUnlink(item.pdfFile))]);
+    await Assignment.deleteOne({ _id: assignmentId, lecturerId: req.user.userId, status: "deleted" });
+    return res.json({ message: "Assignment and its saved questions, student answer PDFs, answers, and similarity report were deleted.", deleted: { questionBlocks: questionCount, submissions: submissions.length } });
+}
+
+async function addQuestion(req, res) {
+    if (!readyUser(req, res)) return;
+    const { assignmentId } = req.params;
+    const { questionNumber, questionText = "", parentQuestionId = null } = req.body || {};
+    if (!validId(assignmentId)) return res.status(400).json({ message: "Invalid assignment id." });
+    if (typeof questionNumber !== "string" || !questionNumber.trim()) return res.status(400).json({ message: "Enter a question label." });
+    if (typeof questionText !== "string" || (parentQuestionId && !validId(parentQuestionId))) return res.status(400).json({ message: "Enter valid question details." });
+    const assignment = await Assignment.findOne({ _id: assignmentId, lecturerId: req.user.userId, status: "review" });
+    if (!assignment) return res.status(404).json({ message: "Reviewable assignment not found." });
+    if (parentQuestionId && !(await Question.exists({ _id: parentQuestionId, assignmentId }))) return res.status(400).json({ message: "Parent must belong to this assignment." });
+    try {
+        const question = await Question.create({ assignmentId, questionNumber: questionNumber.trim(), questionText: questionText.trim(), parentQuestionId });
+        return res.status(201).json({ message: "Question block added.", question: publicQuestion(question) });
+    } catch (error) {
+        if (error.code === 11000) return res.status(409).json({ message: "That question label already exists." });
+        throw error;
+    }
 }
 
 async function updateAssignmentSettings(req, res) {
@@ -45,30 +109,31 @@ async function updateAssignmentSettings(req, res) {
     if (!validId(assignmentId)) return res.status(400).json({ message: "Invalid assignment id." });
     const assignment = await Assignment.findOne({ _id: assignmentId, lecturerId: req.user.userId, status: { $in: ["review", "published"] } });
     if (!assignment) return res.status(404).json({ message: "Assignment not found." });
-    const { moduleCode, moduleName, dueAt, durationMinutes } = req.body || {};
-    if (moduleCode !== undefined) {
-        if (typeof moduleCode !== "string" || moduleCode.trim().length > 24) return res.status(400).json({ message: "Module code must be 24 characters or fewer." });
-        assignment.moduleCode = moduleCode.trim();
-    }
-    if (moduleName !== undefined) {
-        if (typeof moduleName !== "string" || moduleName.trim().length > 120) return res.status(400).json({ message: "Module name must be 120 characters or fewer." });
-        assignment.moduleName = moduleName.trim();
+    const { moduleId, dueAt } = req.body || {};
+    if (moduleId !== undefined) {
+        if (!validId(moduleId)) return res.status(400).json({ message: "Choose a valid module." });
+        const module = await Module.findOne({ _id: moduleId, lecturerId: req.user.userId });
+        if (!module) return res.status(404).json({ message: "Module not found." });
+        assignment.moduleId = module._id;
+        assignment.moduleCode = module.code;
+        assignment.moduleName = module.name;
     }
     if (dueAt !== undefined) {
-        if (dueAt === null || dueAt === "") assignment.dueAt = null;
+        if (dueAt === null || dueAt === "") return res.status(400).json({ message: "Set the date and time when uploads close." });
         else {
             const parsedDueAt = new Date(dueAt);
             if (Number.isNaN(parsedDueAt.getTime())) return res.status(400).json({ message: "Enter a valid assignment deadline." });
             assignment.dueAt = parsedDueAt;
         }
     }
-    if (durationMinutes !== undefined) {
-        if (durationMinutes === null || durationMinutes === "") assignment.durationMinutes = null;
-        else if (!Number.isInteger(Number(durationMinutes)) || Number(durationMinutes) < 1 || Number(durationMinutes) > 1440) return res.status(400).json({ message: "Duration must be between 1 minute and 24 hours." });
-        else assignment.durationMinutes = Number(durationMinutes);
+    if (assignment.isModified("dueAt")) {
+        assignment.similarityStatus = "pending";
+        assignment.similarityStartedAt = null;
+        assignment.similarityCompletedAt = null;
+        await SimilarityReport.deleteOne({ assignmentId: assignment._id });
     }
     await assignment.save();
-    return res.json({ assignment: { id: String(assignment._id), title: assignment.title, status: assignment.status, moduleCode: assignment.moduleCode, moduleName: assignment.moduleName, dueAt: assignment.dueAt, durationMinutes: assignment.durationMinutes } });
+    return res.json({ assignment: { id: String(assignment._id), title: assignment.title, status: assignment.status, moduleId: assignment.moduleId, moduleCode: assignment.moduleCode, moduleName: assignment.moduleName, dueAt: assignment.dueAt } });
 }
 
 async function updateQuestion(req, res) {
@@ -177,21 +242,24 @@ async function publishAssignment(req, res) {
     const needsReview = questions.filter((question) => question.verificationStatus !== "verified");
     if (needsReview.length) return res.status(409).json({ message: `Verify all questions before publishing. ${needsReview.length} remain.` });
     assignment.status = "published";
+    assignment.similarityStatus = "pending";
     await assignment.save();
     return res.json({ message: "Assignment published.", assignment: { id: String(assignment._id), title: assignment.title, status: assignment.status } });
 }
 
 async function listPublishedAssignments(req, res) {
     if (!readyUser(req, res)) return;
-    const assignments = await Assignment.find({ status: "published" }).select("title description moduleCode moduleName dueAt durationMinutes createdAt lecturerId").populate("lecturerId", "username").sort({ createdAt: -1 }).lean();
-    return res.json({ assignments: assignments.map((item) => ({ id: String(item._id), title: item.title, description: item.description, moduleCode: item.moduleCode, moduleName: item.moduleName, dueAt: item.dueAt, durationMinutes: item.durationMinutes, lecturer: item.lecturerId?.username || "Lecturer", createdAt: item.createdAt })) });
+    const modules = await Module.find({ studentIds: req.user.userId }).select("_id").lean();
+    const moduleIds = modules.map((item) => item._id);
+    const assignments = await Assignment.find({ status: "published", $or: [{ moduleId: { $in: moduleIds } }, { moduleId: null }, { moduleId: { $exists: false } }] }).select("title description moduleCode moduleName moduleId dueAt createdAt lecturerId similarityStatus").populate("lecturerId", "username").sort({ createdAt: -1 }).lean();
+    return res.json({ assignments: assignments.map((item) => ({ id: String(item._id), title: item.title, description: item.description, moduleCode: item.moduleCode, moduleName: item.moduleName, moduleId: item.moduleId ? String(item.moduleId) : null, dueAt: item.dueAt, similarityStatus: item.similarityStatus, lecturer: item.lecturerId?.username || "Lecturer", createdAt: item.createdAt })) });
 }
 
 async function listSubmissions(req, res) {
     if (!readyUser(req, res)) return;
     const owned = await Assignment.find({ lecturerId: req.user.userId }).select("_id").lean();
     const assignmentIds = owned.map((item) => item._id);
-    const submissions = await Submission.find({ assignmentId: { $in: assignmentIds } }).populate("studentId", "username email").populate("assignmentId", "title").sort({ createdAt: -1 }).lean();
+    const submissions = await Submission.find({ assignmentId: { $in: assignmentIds }, active: { $ne: false } }).populate("studentId", "username email").populate("assignmentId", "title").sort({ createdAt: -1 }).lean();
     return res.json({ submissions: submissions.map((item) => ({ id: String(item._id), assignmentId: String(item.assignmentId._id), assignmentTitle: item.assignmentId.title, student: { id: String(item.studentId._id), username: item.studentId.username, email: item.studentId.email }, status: item.status, answerCount: item.answers.length, createdAt: item.createdAt })) });
 }
 
@@ -225,6 +293,45 @@ async function getLecturerSubmission(req, res) {
             };
         })
     } });
+}
+
+async function reprocessSubmission(req, res) {
+    if (!readyUser(req, res)) return;
+    const { submissionId } = req.params;
+    if (!validId(submissionId)) return res.status(400).json({ message: "Invalid submission id." });
+    const submission = await Submission.findById(submissionId).populate("assignmentId", "title lecturerId similarityStatus");
+    if (!submission || !submission.assignmentId || String(submission.assignmentId.lecturerId) !== String(req.user.userId)) return res.status(404).json({ message: "Submission not found." });
+    const filePath = path.resolve(__dirname, "..", submission.pdfFile);
+    const privateRoot = path.resolve(PRIVATE_UPLOAD_DIR);
+    if (!filePath.startsWith(privateRoot + path.sep)) return res.status(404).json({ message: "The private answer PDF is unavailable." });
+    let extraction;
+    try { extraction = await extractPdfText(await fs.readFile(filePath)); }
+    catch { return res.status(422).json({ message: "UniCheck could not read this saved PDF. Check that OCR is installed for scanned pages." }); }
+    const questions = await Question.find({ assignmentId: submission.assignmentId._id }).sort({ createdAt: 1 }).lean();
+    const answers = extractAnswers(extraction.text, questions);
+    if (!answers.length) return res.status(422).json({ message: "No answer labels matched. Begin each main answer with Q1, Q2, and so on; write subpart labels such as e), i), or 1) beneath their parent question." });
+    const parentsWithChildren = new Set(questions.filter((item) => item.parentQuestionId).map((item) => String(item.parentQuestionId)));
+    const expected = questions.filter((item) => item.verificationStatus !== "rejected" && item.questionText.trim() && !parentsWithChildren.has(String(item._id)));
+    const savedIds = new Set(answers.map((answer) => String(answer.questionId)));
+    const missingQuestionNumbers = expected.filter((item) => !savedIds.has(String(item._id))).map((item) => item.questionNumber);
+    const locked = await Assignment.findOneAndUpdate(
+        { _id: submission.assignmentId._id, lecturerId: req.user.userId, similarityStatus: { $ne: "processing" } },
+        { $set: { similarityStatus: "processing", similarityStartedAt: new Date() } },
+        { new: true }
+    );
+    if (!locked) return res.status(409).json({ message: "A similarity comparison is running. Try extracting this PDF again when it finishes." });
+    try {
+        submission.answers = answers;
+        submission.status = missingQuestionNumbers.length ? "needs_review" : "processed";
+        submission.processingError = null;
+        await submission.save();
+        await SimilarityReport.deleteOne({ assignmentId: submission.assignmentId._id });
+        await Assignment.updateOne({ _id: submission.assignmentId._id }, { $set: { similarityStatus: "pending", similarityStartedAt: null, similarityCompletedAt: null } });
+    } catch (error) {
+        await Assignment.updateOne({ _id: submission.assignmentId._id }, { $set: { similarityStatus: "pending", similarityStartedAt: null } });
+        throw error;
+    }
+    return res.json({ message: "Saved PDF reprocessed with the current question hierarchy.", submission: { id: String(submission._id), status: submission.status, mappedAnswers: answers.length, expectedAnswers: expected.length, missingQuestionNumbers, extractionMethod: extraction.extractionMethod } });
 }
 
 async function releaseSimilarityFeedback(req, res) {
@@ -265,14 +372,35 @@ async function getSimilarityReport(req, res) {
     if (!validId(assignmentId)) return res.status(400).json({ message: "Invalid assignment id." });
     const assignment = await Assignment.findOne({ _id: assignmentId, lecturerId: req.user.userId });
     if (!assignment) return res.status(404).json({ message: "Assignment not found." });
-    const [questions, submissions] = await Promise.all([
+    const [questions, submissions, savedReport] = await Promise.all([
         Question.find({ assignmentId, questionText: { $regex: "\\S" }, verificationStatus: { $ne: "rejected" } }).sort({ createdAt: 1, _id: 1 }).lean(),
-        Submission.find({ assignmentId, status: { $in: ["processed", "needs_review"] } }).populate("studentId", "username email").sort({ createdAt: 1 }).lean()
+        Submission.find({ assignmentId, active: { $ne: false }, status: { $in: ["processed", "needs_review"] } }).populate("studentId", "username email").sort({ createdAt: 1 }).lean(),
+        SimilarityReport.findOne({ assignmentId }).lean()
     ]);
+    if (savedReport?.status === "completed") {
+        const activeIds = new Set(submissions.map((item) => String(item._id)));
+        const candidates = (savedReport.flaggedPairs || []).filter((pair) => pair.submissionIds.every((id) => activeIds.has(id)));
+        const pairById = new Map(submissions.map((item) => [String(item._id), item]));
+        const pairs = candidates.map((pair) => ({
+            ...pair,
+            feedbackShared: pair.submissionIds.every((id) => (pairById.get(id)?.similarityFeedbacks || []).some((item) => item.pairKey === pair.submissionIds.slice().sort().join(":"))),
+            questions: pair.questions.map((question) => ({
+                ...question,
+                studentAnswers: pair.submissionIds.map((submissionId) => {
+                    const submission = pairById.get(submissionId);
+                    const answer = submission.answers.find((item) => String(item.questionId) === question.questionId);
+                    return { studentId: String(submission.studentId._id), answerText: answer?.answerText || "" };
+                })
+            }))
+        }));
+        return res.json({ assignment: { id: String(assignment._id), title: assignment.title, dueAt: assignment.dueAt }, submissionCount: submissions.length, pairs, automatic: true, reportStatus: "completed", criticalPairCount: savedReport.criticalPairCount, pairsCompared: savedReport.pairsCompared, truncated: savedReport.truncated, similarityMethod: savedReport.similarityMethod, note: "Highest overall or question-level similarities among the submissions included in this comparison. Review each answer in context; similarity does not establish why answers are alike." });
+    }
+    if (savedReport?.status === "processing" || savedReport?.status === "failed") return res.json({ assignment: { id: String(assignment._id), title: assignment.title, dueAt: assignment.dueAt }, submissionCount: submissions.length, pairs: [], automatic: true, reportStatus: savedReport.status, note: savedReport.status === "processing" ? "UniCheck is comparing answers. Refresh this page shortly." : "The automatic comparison encountered a problem and will retry in the background." });
+    if (assignment.dueAt && assignment.dueAt.getTime() > Date.now()) return res.json({ assignment: { id: String(assignment._id), title: assignment.title, dueAt: assignment.dueAt }, submissionCount: submissions.length, pairs: [], automatic: true, reportStatus: "waiting_deadline", note: "Automatic comparison starts after the submission deadline." });
     const pairs = await compareSubmissions(submissions, questions);
     const semanticAvailable = pairs.some((pair) => pair.similarityMethod === "semantic+text");
     return res.json({
-        assignment: { id: String(assignment._id), title: assignment.title },
+        assignment: { id: String(assignment._id), title: assignment.title, dueAt: assignment.dueAt },
         submissionCount: submissions.length,
         pairs,
         note: semanticAvailable
@@ -281,4 +409,17 @@ async function getSimilarityReport(req, res) {
     });
 }
 
-module.exports = { listLecturerAssignments, getLecturerAssignment, updateAssignmentSettings, updateQuestion, verifyQuestion, verifyAllQuestions, publishAssignment, listPublishedAssignments, listSubmissions, getLecturerSubmission, rejectQuestion, restoreQuestion, getSimilarityReport, releaseSimilarityFeedback };
+async function startSimilarityReport(req, res) {
+    if (!readyUser(req, res)) return;
+    const { assignmentId } = req.params;
+    if (!validId(assignmentId)) return res.status(400).json({ message: "Invalid assignment id." });
+    const assignment = await Assignment.findOne({ _id: assignmentId, lecturerId: req.user.userId, status: "published" }).select("_id dueAt similarityStatus").lean();
+    if (!assignment) return res.status(404).json({ message: "Published assignment not found." });
+    const submissionCount = await Submission.countDocuments({ assignmentId, active: { $ne: false }, status: { $in: ["processed", "needs_review"] } });
+    if (submissionCount < 2) return res.status(422).json({ message: "At least two submitted answer PDFs are needed to compare." });
+    const result = await compareAssignmentNow(assignment._id, { final: assignment.dueAt && assignment.dueAt.getTime() <= Date.now() });
+    if (!result.started) return res.status(409).json({ message: "A comparison is already running for this assignment." });
+    return res.status(202).json({ message: "Comparison started for the current submitted PDFs. You can run it again after more students submit.", reportStatus: "processing", submissionCount });
+}
+
+module.exports = { listLecturerAssignments, getLecturerAssignment, deleteAssignment, updateAssignmentSettings, updateQuestion, addQuestion, verifyQuestion, verifyAllQuestions, publishAssignment, listPublishedAssignments, listSubmissions, getLecturerSubmission, reprocessSubmission, rejectQuestion, restoreQuestion, getSimilarityReport, startSimilarityReport, releaseSimilarityFeedback };

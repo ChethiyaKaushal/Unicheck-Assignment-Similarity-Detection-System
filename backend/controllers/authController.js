@@ -2,6 +2,11 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+const listUsers = async (req, res) => {
+    const users = await User.find({}).select("username email role status mustChangePassword createdAt").sort({ role: 1, username: 1 }).lean();
+    return res.json({ users: users.map((user) => ({ id: String(user._id), username: user.username, email: user.email, role: user.role, status: user.status, mustChangePassword: user.mustChangePassword, createdAt: user.createdAt })) });
+};
+
 // Create a user account (admin only - route protection required)
 const createUser = async (req, res) => {
     try {
@@ -281,6 +286,7 @@ const updateUserStatus = async (req, res) => {
 
 
 module.exports = {
+    listUsers,
     createUser,
     loginUser,
     changePassword,

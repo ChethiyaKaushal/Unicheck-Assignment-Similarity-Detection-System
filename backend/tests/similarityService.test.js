@@ -6,6 +6,7 @@ const {
     compareSubmissions,
     phraseSimilarityPercent,
     sharedPhrases,
+    codeSimilarityPercent,
     setEmbeddingProvider
 } = require("../services/similarityService");
 
@@ -74,4 +75,24 @@ test("shared numbered answer points remain available as phrase evidence", () => 
     const right = "The advantages are: 1. lower cost for users 2. faster processing for requests";
     assert.equal(phraseSimilarityPercent(left, right), 100);
     assert.ok(sharedPhrases(left, right).length > 0);
+});
+
+test("code comparison recognizes equivalent snippets with renamed variables", () => {
+    const first = "int sum(int left, int right) {\n  return left + right;\n}";
+    const renamed = "int total(int a, int b) {\n  return a + b;\n}";
+    const changed = "int total(int a, int b) {\n  return a - b;\n}";
+    assert.equal(codeSimilarityPercent(first, renamed), 100);
+    assert.ok(codeSimilarityPercent(first, changed) < codeSimilarityPercent(first, renamed));
+    assert.equal(codeSimilarityPercent("The answer is four.", "The result is four."), null);
+});
+
+test("batch report mode counts all critical pairs while retaining only a bounded set", async () => {
+    setEmbeddingProvider(async (texts) => texts.map(() => [1, 0, 0]));
+    const { submissions, question } = makePair("The same detailed answer explains the complete system operation clearly.", "The same detailed answer explains the complete system operation clearly.", ["The same detailed answer explains the complete system operation clearly."]);
+    const result = await compareSubmissions(submissions, [question], { includeAnswers: false, criticalThreshold: 70, limit: 1, skipCommonAnswer: true, aggregateSemantic: true });
+    assert.equal(result.pairsCompared, 3);
+    assert.equal(result.criticalPairCount, 3);
+    assert.equal(result.pairs.length, 1);
+    assert.equal(result.pairs[0].questions[0].studentAnswers, undefined);
+    setEmbeddingProvider(null);
 });

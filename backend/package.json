@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node --test tests/similarityService.test.js tests/questionProcessingService.test.js",
+    "test": "node --test tests/answerExtractionService.test.js tests/similarityService.test.js tests/questionProcessingService.test.js",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },

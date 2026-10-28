@@ -5,6 +5,7 @@ const crypto = require("crypto");
 
 const Assignment = require("../models/Assignment");
 const Question = require("../models/Question");
+const Module = require("../models/Module");
 
 const {
     extractPdfText,
@@ -42,18 +43,14 @@ const uploadQuestionPaper = async (req, res) => {
             });
         }
 
-        const moduleCode = String(req.body.moduleCode || "").trim();
-        const moduleName = String(req.body.moduleName || "").trim();
+        const module = await Module.findOne({ _id: req.body.moduleId, lecturerId: req.user.userId });
+        if (!module) return res.status(400).json({ message: "Choose one of your modules before creating the assignment." });
+        const moduleCode = module.code;
+        const moduleName = module.name;
         const dueAt = req.body.dueAt ? new Date(req.body.dueAt) : null;
-        const durationMinutes = req.body.durationMinutes ? Number(req.body.durationMinutes) : null;
-        if (moduleCode.length > 24 || moduleName.length > 120) {
-            return res.status(400).json({ message: "Module code or name is too long." });
-        }
+        if (!dueAt) return res.status(400).json({ message: "Set the date and time when uploads close." });
         if (dueAt && Number.isNaN(dueAt.getTime())) {
             return res.status(400).json({ message: "Enter a valid assignment deadline." });
-        }
-        if (durationMinutes !== null && (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 1440)) {
-            return res.status(400).json({ message: "Duration must be between 1 minute and 24 hours." });
         }
 
         // 2. Extract embedded text or use OCR.
@@ -102,8 +99,8 @@ const uploadQuestionPaper = async (req, res) => {
             description: req.body.description || "",
             moduleCode,
             moduleName,
+            moduleId: module._id,
             dueAt,
-            durationMinutes,
             lecturerId: req.user.userId,
             questionPaper: path.relative(
                 path.join(__dirname, ".."),

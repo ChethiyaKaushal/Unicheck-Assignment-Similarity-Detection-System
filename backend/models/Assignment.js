@@ -21,6 +21,8 @@ const assignmentSchema = new mongoose.Schema(
             maxlength: 24
         },
 
+        moduleId: { type: mongoose.Schema.Types.ObjectId, ref: "Module", default: null },
+
         moduleName: {
             type: String,
             trim: true,
@@ -30,7 +32,7 @@ const assignmentSchema = new mongoose.Schema(
 
         dueAt: {
             type: Date,
-            default: null
+            required: true
         },
 
         durationMinutes: {
@@ -39,6 +41,10 @@ const assignmentSchema = new mongoose.Schema(
             max: 1440,
             default: null
         },
+
+        similarityStatus: { type: String, enum: ["pending", "processing", "completed", "failed"], default: "pending" },
+        similarityStartedAt: { type: Date, default: null },
+        similarityCompletedAt: { type: Date, default: null },
 
         lecturerId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -53,7 +59,7 @@ const assignmentSchema = new mongoose.Schema(
 
         status: {
             type: String,
-            enum: ["draft", "processing", "review", "published"],
+            enum: ["draft", "processing", "review", "published", "deleted"],
             default: "draft"
         }
     },

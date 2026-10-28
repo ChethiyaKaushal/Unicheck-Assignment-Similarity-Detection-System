@@ -10,7 +10,9 @@ export default function Reports() {
   const [message, setMessage] = useState("");
   const [notes, setNotes] = useState({});
   const [sharing, setSharing] = useState("");
+  const [comparing, setComparing] = useState(false);
   const selected = params.get("assignment") || "";
+  const selectedAssignment = assignments.find((item) => item.id === selected);
   const loadingReport = Boolean(selected && report?.assignment.id !== selected && !error);
 
   useEffect(() => {
@@ -20,10 +22,12 @@ export default function Reports() {
   useEffect(() => {
     if (!selected) return undefined;
     let active = true;
-    api("/assignments/" + selected + "/report")
+    const refresh = () => api("/assignments/" + selected + "/report")
       .then((data) => { if (active) setReport(data); })
       .catch((issue) => { if (active) setError(issue.message); });
-    return () => { active = false; };
+    void refresh();
+    const timer = window.setInterval(refresh, 10000);
+    return () => { active = false; window.clearInterval(timer); };
   }, [selected]);
 
   async function shareFeedback(pair) {
@@ -46,6 +50,17 @@ export default function Reports() {
     finally { setSharing(""); }
   }
 
+  async function compareNow() {
+    setComparing(true); setError(""); setMessage("");
+    try {
+      await api(`/assignments/${selected}/report/run`, { method: "POST" });
+      setMessage("Comparison started for the PDFs submitted so far. This report will refresh automatically; run it again after more students submit.");
+      const data = await api(`/assignments/${selected}/report`);
+      setReport(data);
+    } catch (issue) { setError(issue.message); }
+    finally { setComparing(false); }
+  }
+
   return <div className="min-h-screen bg-emerald-50 p-5 md:p-8"><main className="mx-auto max-w-7xl">
     <p className="text-sm font-semibold uppercase tracking-wide text-amber-400">Lecturer workspace</p>
     <h1 className="mt-2 text-3xl font-bold text-gray-800">Compare student answers</h1>
@@ -54,13 +69,19 @@ export default function Reports() {
     {loadingReport && <p role="status" className="mt-4 text-sm text-gray-500">Comparing answers… the first report may take longer while the local language model loads.</p>}
     {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
     {message && <p role="status" className="mt-4 rounded-lg bg-emerald-50 p-3 text-emerald-700">{message}</p>}
+    {selected && <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={compareNow} disabled={comparing || report?.reportStatus === "processing" || (selectedAssignment?.submissionCount || 0) < 2} className="rounded-lg bg-emerald-600 px-4 py-2 text-white disabled:opacity-50">{comparing || report?.reportStatus === "processing" ? "Comparing submitted PDFs…" : report?.reportStatus === "completed" ? "Compare latest submissions" : "Compare submissions now"}</button><span className="text-xs text-gray-500">{(selectedAssignment?.submissionCount || 0) < 2 ? "At least two student PDFs must be submitted first." : "Available before or after the deadline; each run uses submissions received at that time."}</span></div>}
     {report?.assignment.id === selected && <>
       <div className="mt-5 rounded-xl bg-white p-5 shadow-sm">
         <h2 className="text-xl font-semibold">{report.assignment.title}</h2>
-        <p className="mt-1 text-gray-600">{report.submissionCount} submissions · {report.pairs.length} student pairs</p>
+        <p className="mt-1 text-gray-600">{report.submissionCount} submissions · {report.automatic ? `${report.pairsCompared ?? 0} pairs compared · ${report.criticalPairCount ?? report.pairs.length} pairs met the review threshold` : `${report.pairs.length} student pairs`}</p>
         <p className="mt-3 rounded-lg bg-slate-900/5 p-3 text-sm text-gray-600">{report.note}</p>
+        {report.truncated && <p className="mt-3 rounded-lg bg-amber-950/20 p-3 text-sm text-amber-300">Showing the highest 300 similarity pairs. {report.criticalPairCount - report.pairs.length} additional pairs also met the threshold.</p>}
       </div>
-      {report.pairs.length === 0
+      {report.reportStatus === "waiting_deadline"
+        ? <p className="mt-4 rounded-xl bg-white p-5 text-gray-600">Automatic final comparison runs after the deadline. You can also compare the current submissions any time with the button above.</p>
+        : report.reportStatus === "processing" || report.reportStatus === "failed"
+        ? <p className="mt-4 rounded-xl bg-white p-5 text-gray-600">{report.note}</p>
+        : report.pairs.length === 0
         ? <p className="mt-4 rounded-xl bg-white p-5 text-gray-600">At least two submissions with mapped answers are needed for a comparison.</p>
         : <div className="mt-5 space-y-6">{report.pairs.map((pair) => {
           const pairKey = pair.submissionIds.join(":");
@@ -98,6 +119,7 @@ export default function Reports() {
                   {question.semanticScore !== null
                     ? " · Idea similarity: " + question.semanticScore + "%"
                     : " · Idea similarity unavailable (text-only fallback)"}
+                  {question.codeScore !== null && question.codeScore !== undefined ? " · Code structure: " + question.codeScore + "%" : ""}
                 </p>
                 <p className="mt-1 text-gray-500">Text evidence: {question.confidence}. {question.confidenceNote}</p>
                 {question.commonAnswerPercent >= 35 && <p className="mt-1 text-gray-500">A similar answer appears in {question.commonAnswerPercent}% of submissions for this question.</p>}
@@ -108,9 +130,11 @@ export default function Reports() {
               </div>}
               <div className="grid gap-3 md:grid-cols-2">{pair.students.map((student, index) => {
                 const response = question.studentAnswers?.find((answer) => answer.studentId === student.id) || question.studentAnswers?.[index];
+                const responseText = response?.answerText || "No answer was mapped to this question.";
+                const codeAnswer = /[{};]|(?:==|!=|<=|>=|&&|\|\||=>|\+\+|--)/.test(responseText);
                 return <section key={student.id} className="min-w-0 rounded-lg bg-black/10 p-4">
                   <div className="mb-2 border-b border-white/10 pb-2"><p className="font-medium">{student.username}</p><p className="text-xs text-gray-500">{student.email}</p></div>
-                  <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">{response?.answerText || "No answer was mapped to this question."}</p>
+                  {codeAnswer ? <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-sm leading-6 text-gray-700">{responseText}</pre> : <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">{responseText}</p>}
                 </section>;
               })}</div>
             </article>)}</div>

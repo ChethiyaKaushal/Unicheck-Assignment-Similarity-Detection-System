@@ -137,6 +137,60 @@ function sharedPhrases(left, right) {
     return result;
 }
 
+const CODE_KEYWORDS = new Set(["if", "else", "for", "while", "switch", "case", "return", "function", "class", "module", "endmodule", "always", "assign", "wire", "reg", "input", "output", "begin", "end", "int", "float", "double", "char", "void", "const", "let", "var"]);
+
+function looksLikeCode(text) {
+    const value = String(text || "");
+    const lines = value.split(/\r?\n/).filter((line) => line.trim());
+    const codeCueCount = (value.match(/[{};]|(?:==|!=|<=|>=|&&|\|\||=>|\+\+|--)/g) || []).length;
+    const keywordCue = /\b(?:module|endmodule|always|assign|wire|reg|function|class|return|const|int|void)\b/i.test(value);
+    const assignmentCue = lines.filter((line) => /^\s*[\w.$]+\s*=(?!=)/.test(line)).length;
+    return codeCueCount >= 2 || keywordCue || (lines.length >= 2 && assignmentCue >= 1);
+}
+
+function codeTokens(text, normalizeIdentifiers = false) {
+    const source = String(text || "")
+        .replace(/\/\*[\s\S]*?\*\//g, " ")
+        .replace(/\/\/[^\n]*/g, " ")
+        .replace(/--[^\n]*/g, " ");
+    const raw = source.match(/(?:0x[\da-f]+|\d+(?:\.\d+)?|[a-z_$][\w$]*|===|!==|==|!=|<=|>=|&&|\|\||=>|\+\+|--|<<|>>|[{}()[\].,;:+*/%<>=!&|^~-])/giu) || [];
+    if (!normalizeIdentifiers) return raw.map((token) => token.toLowerCase());
+    const names = new Map();
+    let nextName = 0;
+    return raw.map((token) => {
+        const value = token.toLowerCase();
+        if (!/^[a-z_$][\w$]*$/i.test(token) || CODE_KEYWORDS.has(value)) return value;
+        if (!names.has(value)) names.set(value, `identifier_${nextName++}`);
+        return names.get(value);
+    });
+}
+
+function codeSequenceScore(tokensA, tokensB, size) {
+    if (!tokensA.length || !tokensB.length) return 0;
+    const grams = (tokens) => {
+        const result = new Set();
+        if (tokens.length < size) return new Set([tokens.join(" ")]);
+        for (let i = 0; i <= tokens.length - size; i += 1) result.add(tokens.slice(i, i + size).join(" "));
+        return result;
+    };
+    const a = grams(tokensA);
+    const b = grams(tokensB);
+    let common = 0;
+    for (const gram of a) if (b.has(gram)) common += 1;
+    return Math.round((2 * common / (a.size + b.size)) * 100);
+}
+
+function codeSimilarityPercent(left, right) {
+    if (!looksLikeCode(left) || !looksLikeCode(right)) return null;
+    const exactA = codeTokens(left);
+    const exactB = codeTokens(right);
+    const structureA = codeTokens(left, true);
+    const structureB = codeTokens(right, true);
+    const exact = Math.max(codeSequenceScore(exactA, exactB, 3), codeSequenceScore(exactA, exactB, 5));
+    const structure = Math.max(codeSequenceScore(structureA, structureB, 3), codeSequenceScore(structureA, structureB, 5));
+    return Math.max(exact, structure);
+}
+
 function splitIntoEmbeddingChunks(text) {
     const parts = String(text || "")
         .replace(/\r/g, "\n")
@@ -279,7 +333,8 @@ function answerConfidence(leftText, rightText, commonAnswerPercent, responseCoun
     };
 }
 
-async function compareSubmissions(submissions, questions) {
+async function compareSubmissions(submissions, questions, options = {}) {
+    const { includeAnswers = true, criticalThreshold = 70, limit = Infinity, skipCommonAnswer = false, aggregateSemantic = false } = options;
     const questionContexts = new Map();
     const answerRecords = new Map();
     const embeddingTexts = [];
@@ -305,7 +360,16 @@ async function compareSubmissions(submissions, questions) {
         console.warn("Semantic similarity model unavailable; using text overlap only:", error.message);
     }
 
+    const meanByAnswer = new Map();
+    if (aggregateSemantic && semanticAvailable) {
+        for (const [key, record] of answerRecords) meanByAnswer.set(key, meanVector(record.chunks, vectors));
+    }
+    const contextByQuestion = new Map([...questionContexts].map(([questionId, texts]) => [questionId, buildQuestionContext(texts)]));
+
     const pairs = [];
+    const criticalPairs = [];
+    let criticalPairCount = 0;
+    const pairPriority = (pair) => Math.max(pair.score, ...pair.questions.map((item) => item.score ?? 0));
     for (let i = 0; i < submissions.length; i += 1) {
         for (let j = i + 1; j < submissions.length; j += 1) {
             const left = submissions[i];
@@ -322,33 +386,41 @@ async function compareSubmissions(submissions, questions) {
                 let score = null;
                 let semanticScore = null;
                 let wordingScore = null;
+                let codeScore = null;
                 let matchedPhrases = [];
                 let confidence = "low";
                 let confidenceNote = "There is not enough text to compare both answers.";
                 let commonAnswerPercent = 0;
                 if (hasBoth) {
-                    const context = buildQuestionContext(questionContexts.get(questionId) || []);
+                    const context = contextByQuestion.get(questionId) || { documentCount: 0, documentFrequency: new Map() };
                     const lexical = weightedSimilarityPercent(leftText, rightText, context);
                     const phrase = phraseSimilarityPercent(leftText, rightText);
                     wordingScore = Math.round(lexical * 0.7 + phrase * 0.3);
+                    codeScore = codeSimilarityPercent(leftText, rightText);
                     matchedPhrases = sharedPhrases(leftText, rightText);
                     const leftKey = String(left._id) + ":" + questionId;
                     const rightKey = String(right._id) + ":" + questionId;
                     const leftRecord = answerRecords.get(leftKey);
                     const rightRecord = answerRecords.get(rightKey);
                     if (semanticAvailable) {
-                        semanticScore = semanticAnswerPercent(leftRecord.chunks, rightRecord.chunks, vectors);
-                        score = Math.round(semanticScore * 0.85 + lexical * 0.10 + phrase * 0.05);
+                        semanticScore = aggregateSemantic
+                            ? cosinePercent(meanByAnswer.get(leftKey), meanByAnswer.get(rightKey))
+                            : semanticAnswerPercent(leftRecord.chunks, rightRecord.chunks, vectors);
+                        score = codeScore === null
+                            ? Math.round(semanticScore * 0.85 + lexical * 0.10 + phrase * 0.05)
+                            : Math.round(semanticScore * 0.70 + lexical * 0.10 + phrase * 0.05 + codeScore * 0.15);
                     } else {
-                        score = Math.round(lexical * 0.7 + phrase * 0.3);
+                        score = codeScore === null
+                            ? Math.round(lexical * 0.7 + phrase * 0.3)
+                            : Math.round(lexical * 0.60 + phrase * 0.10 + codeScore * 0.30);
                     }
 
-                    const peerRecords = submissions.map((submission) => {
+                    const peerRecords = skipCommonAnswer ? [] : submissions.map((submission) => {
                         const answer = (submission.answers || []).find((item) => String(item.questionId) === questionId);
                         return answer ? answerRecords.get(String(submission._id) + ":" + questionId) : null;
                     }).filter(Boolean);
-                    const leftMean = semanticAvailable ? meanVector(leftRecord.chunks, vectors) : null;
-                    const rightMean = semanticAvailable ? meanVector(rightRecord.chunks, vectors) : null;
+                    const leftMean = !skipCommonAnswer && semanticAvailable ? (aggregateSemantic ? meanByAnswer.get(leftKey) : meanVector(leftRecord.chunks, vectors)) : null;
+                    const rightMean = !skipCommonAnswer && semanticAvailable ? (aggregateSemantic ? meanByAnswer.get(rightKey) : meanVector(rightRecord.chunks, vectors)) : null;
                     let commonCount = 0;
                     if (peerRecords.length >= 4) {
                         for (const record of peerRecords) {
@@ -373,14 +445,15 @@ async function compareSubmissions(submissions, questions) {
                     level: score === null ? "unavailable" : similarityLevel(score),
                     semanticScore,
                     wordingScore,
+                    codeScore,
                     matchedPhrases,
                     confidence,
                     confidenceNote,
                     commonAnswerPercent,
-                    studentAnswers: [
+                    studentAnswers: includeAnswers ? [
                         { studentId: String(left.studentId._id), answerText: leftText },
                         { studentId: String(right.studentId._id), answerText: rightText }
-                    ]
+                    ] : undefined
                 });
             }
             const comparable = perQuestion.filter((item) => item.score !== null);
@@ -388,7 +461,7 @@ async function compareSubmissions(submissions, questions) {
                 ? Math.round(comparable.reduce((sum, item) => sum + item.score, 0) / comparable.length)
                 : 0;
             const pairKey = [String(left._id), String(right._id)].sort().join(":");
-            pairs.push({
+            const pair = {
                 submissionIds: [String(left._id), String(right._id)],
                 students: [left.studentId, right.studentId].map((student) => ({ id: String(student._id), username: student.username, email: student.email })),
                 score: overall,
@@ -400,10 +473,25 @@ async function compareSubmissions(submissions, questions) {
                     && (right.similarityFeedbacks || []).some((item) => item.pairKey === pairKey)
                 ),
                 questions: perQuestion
-            });
+            };
+            if (includeAnswers) pairs.push(pair);
+            else if (pair.score >= criticalThreshold || pair.questions.some((item) => item.score !== null && item.score >= criticalThreshold)) {
+                criticalPairCount += 1;
+                if (criticalPairs.length < limit) criticalPairs.push(pair);
+                else {
+                    let lowestIndex = 0;
+                    for (let index = 1; index < criticalPairs.length; index += 1) if (pairPriority(criticalPairs[index]) < pairPriority(criticalPairs[lowestIndex])) lowestIndex = index;
+                    if (pairPriority(pair) > pairPriority(criticalPairs[lowestIndex])) criticalPairs[lowestIndex] = pair;
+                }
+            }
         }
     }
-    return pairs.sort((a, b) => b.score - a.score);
+    if (includeAnswers) {
+        pairs.sort((a, b) => b.score - a.score);
+        return Number.isFinite(limit) ? pairs.slice(0, limit) : pairs;
+    }
+    criticalPairs.sort((a, b) => pairPriority(b) - pairPriority(a));
+    return { pairs: criticalPairs, criticalPairCount, pairsCompared: submissions.length * (submissions.length - 1) / 2, semanticAvailable: semanticAvailable };
 }
 
 function setEmbeddingProvider(provider) {
@@ -418,5 +506,7 @@ module.exports = {
     compareSubmissions,
     phraseSimilarityPercent,
     sharedPhrases,
+    looksLikeCode,
+    codeSimilarityPercent,
     setEmbeddingProvider
 };

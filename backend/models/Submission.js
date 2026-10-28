@@ -88,8 +88,6 @@ const submissionSchema = new mongoose.Schema(
     }
 );
 
-// Prevent a student from submitting the same assignment more than once.
-// Remove this constraint later if resubmissions are required.
 submissionSchema.index(
     { studentId: 1, assignmentId: 1 },
     { unique: true }

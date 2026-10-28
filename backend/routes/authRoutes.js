@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
     createUser,
+    listUsers,
     loginUser,
     changePassword,
     updateUserStatus
@@ -27,6 +28,11 @@ router.post(
 
 
 // Admin only: Create student or lecturer accounts
+router.get("/users", authMiddleware, authorizeRoles("admin"), (req, res, next) => {
+    if (req.user.mustChangePassword) return res.status(403).json({ message: "Please change your password before continuing." });
+    next();
+}, listUsers);
+
 router.post(
     "/users",
     authMiddleware,

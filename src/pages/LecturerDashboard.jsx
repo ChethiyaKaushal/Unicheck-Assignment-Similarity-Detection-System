@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { api, currentUser, logout } from "../lib/api";
+import BrandMark from "../components/BrandMark";
 
 export default function LecturerDashboard() {
   const navigate = useNavigate();
@@ -16,11 +17,12 @@ export default function LecturerDashboard() {
   const navClass = ({ isActive }) => isActive ? "active" : "";
   return <div className="app-frame">
     <aside className="app-sidebar">
-      <div className="app-brand"><div className="brand-mark">UC</div><div><strong className="block text-lg">UniCheck</strong><span className="text-xs text-gray-500">Lecturer workspace</span></div></div>
+      <div className="app-brand"><BrandMark /><div><strong className="block text-lg">UniCheck</strong><span className="text-xs text-gray-500">Lecturer workspace</span></div></div>
       <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[.18em] text-gray-500">Workspace</p>
       <nav className="app-nav">
         <NavLink to="/lecturer-dashboard" className={navClass}><span>⌂</span>Dashboard</NavLink>
         <NavLink to="/assignments" className={navClass}><span>▤</span>Assignments</NavLink>
+        <NavLink to="/modules/manage" className={navClass}><span>▦</span>Modules</NavLink>
         <NavLink to="/submissions" className={navClass}><span>⇧</span>Submissions</NavLink>
         <NavLink to="/reports" className={navClass}><span>◷</span>Similarity reports</NavLink>
         <NavLink to="/profile" className={navClass}><span>○</span>Profile</NavLink>
