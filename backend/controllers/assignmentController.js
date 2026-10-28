@@ -30,7 +30,7 @@ const publicQuestion = (question, parentQuestionNumber = null) => ({
 
 async function listLecturerAssignments(req, res) {
     if (!readyUser(req, res)) return;
-    const assignments = await Assignment.find({ lecturerId: req.user.userId, status: { $ne: "deleted" } }).sort({ createdAt: -1 }).lean();
+    const assignments = await Assignment.find({ lecturerId: req.user.userId, status: { $ne: "deleted" }, adminArchived: { $ne: true } }).sort({ createdAt: -1 }).lean();
     const ids = assignments.map((item) => item._id);
     const counts = await Question.aggregate([{ $match: { assignmentId: { $in: ids }, questionText: { $regex: "\\S" }, verificationStatus: { $ne: "rejected" } } }, { $group: { _id: "$assignmentId", count: { $sum: 1 }, pending: { $sum: { $cond: [{ $eq: ["$verificationStatus", "verified"] }, 0, 1] } } } }]);
     const byId = new Map(counts.map((item) => [String(item._id), item]));
@@ -44,7 +44,7 @@ async function listLecturerAssignments(req, res) {
 async function getLecturerAssignment(req, res) {
     if (!readyUser(req, res)) return;
     if (!validId(req.params.assignmentId)) return res.status(400).json({ message: "Invalid assignment id." });
-    const assignment = await Assignment.findOne({ _id: req.params.assignmentId, lecturerId: req.user.userId, status: { $ne: "deleted" } }).lean();
+    const assignment = await Assignment.findOne({ _id: req.params.assignmentId, lecturerId: req.user.userId, status: { $ne: "deleted" }, adminArchived: { $ne: true } }).lean();
     if (!assignment) return res.status(404).json({ message: "Assignment not found." });
     const questions = await Question.find({ assignmentId: assignment._id, questionText: { $regex: "\\S" } }).sort({ createdAt: 1, _id: 1 }).lean();
     const questionNumbers = new Map(questions.map((question) => [String(question._id), question.questionNumber]));
@@ -249,15 +249,15 @@ async function publishAssignment(req, res) {
 
 async function listPublishedAssignments(req, res) {
     if (!readyUser(req, res)) return;
-    const modules = await Module.find({ studentIds: req.user.userId }).select("_id").lean();
+    const modules = await Module.find({ studentIds: req.user.userId, isArchived: { $ne: true } }).select("_id").lean();
     const moduleIds = modules.map((item) => item._id);
-    const assignments = await Assignment.find({ status: "published", $or: [{ moduleId: { $in: moduleIds } }, { moduleId: null }, { moduleId: { $exists: false } }] }).select("title description moduleCode moduleName moduleId dueAt createdAt lecturerId similarityStatus").populate("lecturerId", "username").sort({ createdAt: -1 }).lean();
+    const assignments = await Assignment.find({ status: "published", adminArchived: { $ne: true }, $or: [{ moduleId: { $in: moduleIds } }, { moduleId: null }, { moduleId: { $exists: false } }] }).select("title description moduleCode moduleName moduleId dueAt createdAt lecturerId similarityStatus").populate("lecturerId", "username").sort({ createdAt: -1 }).lean();
     return res.json({ assignments: assignments.map((item) => ({ id: String(item._id), title: item.title, description: item.description, moduleCode: item.moduleCode, moduleName: item.moduleName, moduleId: item.moduleId ? String(item.moduleId) : null, dueAt: item.dueAt, similarityStatus: item.similarityStatus, lecturer: item.lecturerId?.username || "Lecturer", createdAt: item.createdAt })) });
 }
 
 async function listSubmissions(req, res) {
     if (!readyUser(req, res)) return;
-    const owned = await Assignment.find({ lecturerId: req.user.userId }).select("_id").lean();
+    const owned = await Assignment.find({ lecturerId: req.user.userId, adminArchived: { $ne: true }, status: { $ne: "deleted" } }).select("_id").lean();
     const assignmentIds = owned.map((item) => item._id);
     const submissions = await Submission.find({ assignmentId: { $in: assignmentIds }, active: { $ne: false } }).populate("studentId", "username email").populate("assignmentId", "title").sort({ createdAt: -1 }).lean();
     return res.json({ submissions: submissions.map((item) => ({ id: String(item._id), assignmentId: String(item.assignmentId._id), assignmentTitle: item.assignmentId.title, student: { id: String(item.studentId._id), username: item.studentId.username, email: item.studentId.email }, status: item.status, answerCount: item.answers.length, createdAt: item.createdAt })) });
@@ -413,7 +413,7 @@ async function startSimilarityReport(req, res) {
     if (!readyUser(req, res)) return;
     const { assignmentId } = req.params;
     if (!validId(assignmentId)) return res.status(400).json({ message: "Invalid assignment id." });
-    const assignment = await Assignment.findOne({ _id: assignmentId, lecturerId: req.user.userId, status: "published" }).select("_id dueAt similarityStatus").lean();
+    const assignment = await Assignment.findOne({ _id: assignmentId, lecturerId: req.user.userId, status: "published", adminArchived: { $ne: true } }).select("_id dueAt similarityStatus").lean();
     if (!assignment) return res.status(404).json({ message: "Published assignment not found." });
     const submissionCount = await Submission.countDocuments({ assignmentId, active: { $ne: false }, status: { $in: ["processed", "needs_review"] } });
     if (submissionCount < 2) return res.status(422).json({ message: "At least two submitted answer PDFs are needed to compare." });

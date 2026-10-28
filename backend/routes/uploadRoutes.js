@@ -16,7 +16,7 @@ const router = express.Router();
 router.post(
     "/question-paper",
     authMiddleware,
-    authorizeRoles("lecturer"),
+    authorizeRoles("lecturer", "admin"),
     (req, res, next) => {
         if (req.user.mustChangePassword) {
             return res.status(403).json({

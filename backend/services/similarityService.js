@@ -333,6 +333,28 @@ function answerConfidence(leftText, rightText, commonAnswerPercent, responseCoun
     };
 }
 
+function buildCommonAnswerGroups(records, vectors) {
+    const groups = [];
+    const groupByKey = new Map();
+    for (const record of records) {
+        const signature = tokenize(record.text).join(" ");
+        if (!signature) continue;
+        let group = groupByKey.get(signature);
+        if (!group && vectors) {
+            const mean = meanVector(record.chunks, vectors);
+            group = groups.find((candidate) => cosinePercent(candidate.mean, mean) >= 82);
+        }
+        if (!group) {
+            group = { mean: vectors ? meanVector(record.chunks, vectors) : null, records: [] };
+            groups.push(group);
+        }
+        group.records.push(record);
+        groupByKey.set(signature, group);
+        record.commonAnswerGroup = group;
+    }
+    return groups;
+}
+
 async function compareSubmissions(submissions, questions, options = {}) {
     const { includeAnswers = true, criticalThreshold = 70, limit = Infinity, skipCommonAnswer = false, aggregateSemantic = false } = options;
     const questionContexts = new Map();
@@ -361,15 +383,28 @@ async function compareSubmissions(submissions, questions, options = {}) {
     }
 
     const meanByAnswer = new Map();
-    if (aggregateSemantic && semanticAvailable) {
+    if (semanticAvailable && (aggregateSemantic || !skipCommonAnswer)) {
         for (const [key, record] of answerRecords) meanByAnswer.set(key, meanVector(record.chunks, vectors));
     }
     const contextByQuestion = new Map([...questionContexts].map(([questionId, texts]) => [questionId, buildQuestionContext(texts)]));
+    const answersByQuestion = new Map();
+    for (const submission of submissions) {
+        for (const answer of submission.answers || []) {
+            const questionId = String(answer.questionId);
+            const record = answerRecords.get(String(submission._id) + ":" + questionId);
+            if (!record) continue;
+            if (!answersByQuestion.has(questionId)) answersByQuestion.set(questionId, []);
+            answersByQuestion.get(questionId).push(record);
+        }
+    }
+    if (!skipCommonAnswer) {
+        for (const records of answersByQuestion.values()) buildCommonAnswerGroups(records, semanticAvailable ? vectors : null);
+    }
 
     const pairs = [];
     const criticalPairs = [];
     let criticalPairCount = 0;
-    const pairPriority = (pair) => Math.max(pair.score, ...pair.questions.map((item) => item.score ?? 0));
+    const pairPriority = (pair) => Math.max(pair.reviewScore, ...pair.questions.map((item) => item.reviewScore ?? 0));
     for (let i = 0; i < submissions.length; i += 1) {
         for (let j = i + 1; j < submissions.length; j += 1) {
             const left = submissions[i];
@@ -384,6 +419,7 @@ async function compareSubmissions(submissions, questions, options = {}) {
                 if (!leftText.trim() && !rightText.trim()) continue;
                 const hasBoth = Boolean(leftText.trim() && rightText.trim());
                 let score = null;
+                let reviewScore = null;
                 let semanticScore = null;
                 let wordingScore = null;
                 let codeScore = null;
@@ -415,33 +451,25 @@ async function compareSubmissions(submissions, questions, options = {}) {
                             : Math.round(lexical * 0.60 + phrase * 0.10 + codeScore * 0.30);
                     }
 
-                    const peerRecords = skipCommonAnswer ? [] : submissions.map((submission) => {
-                        const answer = (submission.answers || []).find((item) => String(item.questionId) === questionId);
-                        return answer ? answerRecords.get(String(submission._id) + ":" + questionId) : null;
-                    }).filter(Boolean);
-                    const leftMean = !skipCommonAnswer && semanticAvailable ? (aggregateSemantic ? meanByAnswer.get(leftKey) : meanVector(leftRecord.chunks, vectors)) : null;
-                    const rightMean = !skipCommonAnswer && semanticAvailable ? (aggregateSemantic ? meanByAnswer.get(rightKey) : meanVector(rightRecord.chunks, vectors)) : null;
-                    let commonCount = 0;
+                    const peerRecords = skipCommonAnswer ? [] : (answersByQuestion.get(questionId) || []);
                     if (peerRecords.length >= 4) {
-                        for (const record of peerRecords) {
-                            if (semanticAvailable) {
-                                const peerMean = meanVector(record.chunks, vectors);
-                                if (cosinePercent(leftMean, peerMean) >= 82 && cosinePercent(rightMean, peerMean) >= 82) commonCount += 1;
-                            } else if (
-                                tokenize(record.text).join(" ") === tokenize(leftText).join(" ")
-                                && tokenize(record.text).join(" ") === tokenize(rightText).join(" ")
-                            ) {
-                                commonCount += 1;
-                            }
+                        const group = leftRecord.commonAnswerGroup;
+                        if (group && group === rightRecord.commonAnswerGroup) {
+                            commonAnswerPercent = Math.round((group.records.length / peerRecords.length) * 100);
                         }
-                        commonAnswerPercent = Math.round((commonCount / peerRecords.length) * 100);
                     }
                     ({ confidence, confidenceNote } = answerConfidence(leftText, rightText, commonAnswerPercent, peerRecords.length));
+                    const minimumEvidenceWords = Math.min(informativeTokens(leftText).length, informativeTokens(rightText).length);
+                    const shortAnswerFactor = Math.min(1, minimumEvidenceWords / 5);
+                    const commonAnswerFactor = 1 - (commonAnswerPercent / 200);
+                    reviewScore = Math.round(score * shortAnswerFactor * commonAnswerFactor);
                 }
                 perQuestion.push({
                     questionId,
                     questionNumber: question.questionNumber,
                     score,
+                    reviewScore,
+                    reviewLevel: reviewScore === null ? "unavailable" : similarityLevel(reviewScore),
                     level: score === null ? "unavailable" : similarityLevel(score),
                     semanticScore,
                     wordingScore,
@@ -460,11 +488,15 @@ async function compareSubmissions(submissions, questions, options = {}) {
             const overall = comparable.length
                 ? Math.round(comparable.reduce((sum, item) => sum + item.score, 0) / comparable.length)
                 : 0;
+            const overallReview = comparable.length
+                ? Math.round(comparable.reduce((sum, item) => sum + item.reviewScore, 0) / comparable.length)
+                : 0;
             const pairKey = [String(left._id), String(right._id)].sort().join(":");
             const pair = {
                 submissionIds: [String(left._id), String(right._id)],
                 students: [left.studentId, right.studentId].map((student) => ({ id: String(student._id), username: student.username, email: student.email })),
                 score: overall,
+                reviewScore: overallReview,
                 level: similarityLevel(overall),
                 comparedQuestions: comparable.length,
                 similarityMethod: semanticAvailable ? "semantic+text" : "text-only",
@@ -475,7 +507,7 @@ async function compareSubmissions(submissions, questions, options = {}) {
                 questions: perQuestion
             };
             if (includeAnswers) pairs.push(pair);
-            else if (pair.score >= criticalThreshold || pair.questions.some((item) => item.score !== null && item.score >= criticalThreshold)) {
+            else if (pair.reviewScore >= criticalThreshold || pair.questions.some((item) => item.reviewScore !== null && item.reviewScore >= criticalThreshold)) {
                 criticalPairCount += 1;
                 if (criticalPairs.length < limit) criticalPairs.push(pair);
                 else {

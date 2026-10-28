@@ -9,3 +9,4 @@ build/
 /backend/*.pdf
 /backend/question-page-*.png
 /backend/question-paper-ocr.txt
+/backend/evaluation/labeled-pairs*.json

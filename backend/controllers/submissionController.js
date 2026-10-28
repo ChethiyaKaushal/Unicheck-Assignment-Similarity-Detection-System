@@ -14,7 +14,7 @@ async function submitAnswers(req, res) {
     if (!mongoose.Types.ObjectId.isValid(req.params.assignmentId)) return res.status(400).json({ message: "Invalid assignment id." });
     if (!req.file) return res.status(400).json({ message: "Upload an answer PDF." });
     if (req.file.buffer.subarray(0, 5).toString() !== "%PDF-") return res.status(400).json({ message: "The uploaded file is not a valid PDF." });
-    const assignment = await Assignment.findOne({ _id: req.params.assignmentId, status: "published" });
+    const assignment = await Assignment.findOne({ _id: req.params.assignmentId, status: "published", adminArchived: { $ne: true } });
     if (!assignment) return res.status(404).json({ message: "Published assignment not found." });
     if (assignment.dueAt && assignment.dueAt.getTime() <= Date.now()) return res.status(410).json({ message: "The submission deadline has passed." });
     if (assignment.moduleId) {
@@ -36,7 +36,7 @@ async function submitAnswers(req, res) {
     await fs.writeFile(filePath, req.file.buffer, { flag: "wx", mode: 0o600 });
     try {
         const submission = await Submission.create({ studentId: req.user.userId, assignmentId: assignment._id, pdfFile: path.relative(path.join(__dirname, ".."), filePath), answers, status: allExpectedAnswersMapped ? "processed" : "needs_review" });
-        if (!(await Assignment.exists({ _id: assignment._id, status: "published" }))) {
+        if (!(await Assignment.exists({ _id: assignment._id, status: "published", adminArchived: { $ne: true } }))) {
             await Submission.deleteOne({ _id: submission._id });
             await fs.unlink(filePath).catch(() => {});
             return res.status(410).json({ message: "This assignment is no longer available." });

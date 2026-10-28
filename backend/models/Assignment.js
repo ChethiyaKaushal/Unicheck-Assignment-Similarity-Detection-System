@@ -45,6 +45,8 @@ const assignmentSchema = new mongoose.Schema(
         similarityStatus: { type: String, enum: ["pending", "processing", "completed", "failed"], default: "pending" },
         similarityStartedAt: { type: Date, default: null },
         similarityCompletedAt: { type: Date, default: null },
+        adminArchived: { type: Boolean, default: false },
+        adminArchivedAt: { type: Date, default: null },
 
         lecturerId: {
             type: mongoose.Schema.Types.ObjectId,

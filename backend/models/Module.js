@@ -6,7 +6,9 @@ const moduleSchema = new mongoose.Schema({
     enrollmentCode: { type: String, required: true, unique: true, trim: true, uppercase: true },
     description: { type: String, trim: true, default: "", maxlength: 1000 },
     lecturerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    studentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
+    studentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    isArchived: { type: Boolean, default: false },
+    archivedAt: { type: Date, default: null }
 }, { timestamps: true });
 
 moduleSchema.index({ lecturerId: 1, code: 1 }, { unique: true });

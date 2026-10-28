@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const Module = require("../models/Module");
 
 async function listLecturerModules(req, res) {
-    const modules = await Module.find({ lecturerId: req.user.userId }).populate("studentIds", "username email").sort({ createdAt: -1 }).lean();
+    const modules = await Module.find({ lecturerId: req.user.userId, isArchived: { $ne: true } }).populate("studentIds", "username email").sort({ createdAt: -1 }).lean();
     return res.json({ modules: modules.map((item) => ({ id: String(item._id), name: item.name, code: item.code, enrollmentCode: item.enrollmentCode, description: item.description, studentCount: item.studentIds.length, students: item.studentIds.map((student) => ({ id: String(student._id), username: student.username, email: student.email })) })) });
 }
 
@@ -21,14 +21,14 @@ async function createModule(req, res) {
 }
 
 async function listMyModules(req, res) {
-    const modules = await Module.find({ studentIds: req.user.userId }).populate("lecturerId", "username").sort({ name: 1 }).lean();
+    const modules = await Module.find({ studentIds: req.user.userId, isArchived: { $ne: true } }).populate("lecturerId", "username").sort({ name: 1 }).lean();
     return res.json({ modules: modules.map((item) => ({ id: String(item._id), name: item.name, code: item.code, description: item.description, lecturer: item.lecturerId?.username || "Lecturer" })) });
 }
 
 async function enroll(req, res) {
     const code = String(req.body?.enrollmentCode || "").trim().toUpperCase();
     if (!code) return res.status(400).json({ message: "Enter the enrollment code from your lecturer." });
-    const module = await Module.findOneAndUpdate({ enrollmentCode: code }, { $addToSet: { studentIds: req.user.userId } }, { new: true }).populate("lecturerId", "username");
+    const module = await Module.findOneAndUpdate({ enrollmentCode: code, isArchived: { $ne: true } }, { $addToSet: { studentIds: req.user.userId } }, { new: true }).populate("lecturerId", "username");
     if (!module) return res.status(404).json({ message: "No module matches that enrollment code." });
     return res.json({ message: `Joined ${module.code} · ${module.name}.`, module: { id: String(module._id), name: module.name, code: module.code, lecturer: module.lecturerId?.username || "Lecturer" } });
 }

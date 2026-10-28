@@ -9,7 +9,7 @@ let running = false;
 async function compareAssignmentNow(assignmentId, { final = false } = {}) {
     const now = new Date();
     const claimed = await Assignment.findOneAndUpdate(
-        { _id: assignmentId, status: "published", similarityStatus: { $ne: "processing" } },
+        { _id: assignmentId, status: "published", adminArchived: { $ne: true }, similarityStatus: { $ne: "processing" } },
         { $set: { similarityStatus: "processing", similarityStartedAt: now } },
         { new: true }
     );
@@ -26,7 +26,7 @@ async function compareAssignmentNow(assignmentId, { final = false } = {}) {
                 Submission.find({ assignmentId: claimed._id, active: { $ne: false }, status: { $in: ["processed", "needs_review"] } }).populate("studentId", "username email").lean(),
                 Question.find({ assignmentId: claimed._id, questionText: { $regex: "\\S" }, verificationStatus: { $ne: "rejected" } }).sort({ createdAt: 1 }).lean()
             ]);
-            const result = await compareSubmissions(submissions, questions, { includeAnswers: false, criticalThreshold: 70, limit: 300, skipCommonAnswer: true, aggregateSemantic: true });
+            const result = await compareSubmissions(submissions, questions, { includeAnswers: false, criticalThreshold: 70, limit: 300, aggregateSemantic: true });
             await SimilarityReport.findOneAndUpdate({ assignmentId: claimed._id }, { $set: {
                 status: "completed", submissionCount: submissions.length, pairsCompared: result.pairsCompared,
                 criticalPairCount: result.criticalPairCount, truncated: result.criticalPairCount > result.pairs.length,
@@ -50,9 +50,9 @@ async function processExpiredAssignments() {
     try {
         const staleBefore = new Date(Date.now() - 30 * 60_000);
         const runnable = { $or: [{ similarityStatus: { $in: ["pending", "failed"] } }, { similarityStatus: { $exists: false } }, { similarityStatus: "processing", similarityStartedAt: { $lte: staleBefore } }, { similarityStatus: "completed", similarityCompletedAt: null }] };
-        const expired = await Assignment.find({ status: "published", dueAt: { $lte: new Date() }, ...runnable }).select("_id").limit(5).lean();
+        const expired = await Assignment.find({ status: "published", adminArchived: { $ne: true }, dueAt: { $lte: new Date() }, ...runnable }).select("_id").limit(5).lean();
         for (const candidate of expired) {
-            const claimed = await Assignment.findOneAndUpdate({ _id: candidate._id, status: "published", dueAt: { $lte: new Date() }, ...runnable }, { $set: { similarityStatus: "processing", similarityStartedAt: new Date() } }, { new: true });
+            const claimed = await Assignment.findOneAndUpdate({ _id: candidate._id, status: "published", adminArchived: { $ne: true }, dueAt: { $lte: new Date() }, ...runnable }, { $set: { similarityStatus: "processing", similarityStartedAt: new Date() } }, { new: true });
             if (!claimed) continue;
             try {
                 await SimilarityReport.findOneAndUpdate({ assignmentId: claimed._id }, { $set: { status: "processing", errorMessage: "" } }, { upsert: true, new: true, setDefaultsOnInsert: true });
@@ -60,7 +60,7 @@ async function processExpiredAssignments() {
                     Submission.find({ assignmentId: claimed._id, active: { $ne: false }, status: { $in: ["processed", "needs_review"] } }).populate("studentId", "username email").lean(),
                     Question.find({ assignmentId: claimed._id, questionText: { $regex: "\\S" }, verificationStatus: { $ne: "rejected" } }).sort({ createdAt: 1 }).lean()
                 ]);
-                const result = await compareSubmissions(submissions, questions, { includeAnswers: false, criticalThreshold: 70, limit: 300, skipCommonAnswer: true, aggregateSemantic: true });
+                const result = await compareSubmissions(submissions, questions, { includeAnswers: false, criticalThreshold: 70, limit: 300, aggregateSemantic: true });
                 const saved = await SimilarityReport.findOneAndUpdate({ assignmentId: claimed._id }, { $set: {
                     status: "completed", submissionCount: submissions.length, pairsCompared: result.pairsCompared,
                     criticalPairCount: result.criticalPairCount, truncated: result.criticalPairCount > result.pairs.length,

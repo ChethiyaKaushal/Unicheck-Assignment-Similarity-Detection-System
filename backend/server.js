@@ -10,6 +10,7 @@ const uploadRoutes = require("./routes/uploadRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
 const submissionRoutes = require("./routes/submissionRoutes");
 const moduleRoutes = require("./routes/moduleRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const { startSimilarityScheduler } = require("./services/similarityScheduler");
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +23,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/submissions", submissionRoutes);
 app.use("/api/modules", moduleRoutes);
+app.use("/api/admin", adminRoutes);
 app.use((error, req, res, next) => {
     void next;
     if (error && error.name === "MulterError") return res.status(400).json({ message: error.code === "LIMIT_FILE_SIZE" ? "PDF must not exceed 10 MB." : "Unable to accept this upload." });

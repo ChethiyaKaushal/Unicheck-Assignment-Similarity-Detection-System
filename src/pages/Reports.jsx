@@ -92,7 +92,7 @@ export default function Reports() {
                 <h3 className="mt-1 text-lg font-semibold">{pair.students[0].username} <span className="text-gray-500">vs</span> {pair.students[1].username}</h3>
                 <p className="text-sm text-gray-500">{pair.comparedQuestions} questions with two answers to compare · {pair.similarityMethod === "semantic+text" ? "idea and wording comparison" : "wording comparison only"}</p>
               </div>
-              <span className="rounded-full bg-amber-100 px-4 py-2 font-semibold text-amber-800">Overall similarity {pair.score}% · {pair.level}</span>
+              <div className="flex flex-col gap-1 text-right"><span className="rounded-full bg-amber-100 px-4 py-2 font-semibold text-amber-800">Raw similarity {pair.score}% · {pair.level}</span><span className="text-xs text-gray-500">Review signal {pair.reviewScore ?? pair.score}% (adjusted for short/common answers)</span></div>
             </header>
             <div className="mt-4 rounded-lg border border-amber-900/30 bg-amber-950/10 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -110,7 +110,7 @@ export default function Reports() {
                 <h4 className="font-semibold text-amber-700">{question.questionNumber}</h4>
                 {question.score === null
                   ? <span className="text-sm text-gray-500">Cannot compare: one answer is missing</span>
-                  : <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">Similarity {question.score}% · {question.level}</span>}
+                  : <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">Raw similarity {question.score}% · {question.level}</span><span className="text-xs text-gray-500">Review signal {question.reviewScore ?? question.score}%</span></div>}
               </div>
               {question.score !== null && <div className="mb-3 rounded-lg bg-slate-900/5 p-3 text-sm">
                 <p className="font-medium">Comparison details</p>

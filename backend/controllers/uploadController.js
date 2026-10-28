@@ -6,6 +6,8 @@ const crypto = require("crypto");
 const Assignment = require("../models/Assignment");
 const Question = require("../models/Question");
 const Module = require("../models/Module");
+const AuditLog = require("../models/AuditLog");
+const User = require("../models/User");
 
 const {
     extractPdfText,
@@ -43,8 +45,12 @@ const uploadQuestionPaper = async (req, res) => {
             });
         }
 
-        const module = await Module.findOne({ _id: req.body.moduleId, lecturerId: req.user.userId });
-        if (!module) return res.status(400).json({ message: "Choose one of your modules before creating the assignment." });
+        const lecturerId = req.user.role === "admin" ? req.body.lecturerId : req.user.userId;
+        if (req.user.role === "admin" && !await User.exists({ _id: lecturerId, role: "lecturer", status: "active" })) {
+            return res.status(400).json({ message: "Choose an active lecturer for this assignment." });
+        }
+        const module = await Module.findOne({ _id: req.body.moduleId, lecturerId, isArchived: { $ne: true } });
+        if (!module) return res.status(400).json({ message: "Choose an active module assigned to the selected lecturer." });
         const moduleCode = module.code;
         const moduleName = module.name;
         const dueAt = req.body.dueAt ? new Date(req.body.dueAt) : null;
@@ -101,7 +107,7 @@ const uploadQuestionPaper = async (req, res) => {
             moduleName,
             moduleId: module._id,
             dueAt,
-            lecturerId: req.user.userId,
+            lecturerId,
             questionPaper: path.relative(
                 path.join(__dirname, ".."),
                 savedFilePath
@@ -144,6 +150,9 @@ const uploadQuestionPaper = async (req, res) => {
         // 7. Mark ready for lecturer review only after all saves succeed.
         assignment.status = "review";
         await assignment.save();
+        if (req.user.role === "admin") {
+            await AuditLog.create({ actorId: req.user.userId, action: "assignment.create", targetType: "assignment", targetId: String(assignment._id), summary: `Created assignment ${assignment.title} for ${module.code}.` });
+        }
 
         return res.status(201).json({
             message:

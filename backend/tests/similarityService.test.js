@@ -65,8 +65,23 @@ test("short common answers retain their similarity score but are marked low conf
     const { submissions, question } = makePair("4", "4", ["4", "4"]);
     const pair = (await compareSubmissions(submissions, [question]))[0];
     assert.equal(pair.questions[0].score, 100);
+    assert.equal(pair.questions[0].reviewScore, 10);
     assert.equal(pair.questions[0].confidence, "low");
     assert.equal(pair.questions[0].commonAnswerPercent, 100);
+    setEmbeddingProvider(null);
+});
+
+test("cohort-wide paraphrased answers are grouped once and marked as common", async () => {
+    setEmbeddingProvider(async (texts) => texts.map(() => [1, 0, 0]));
+    const { submissions, question } = makePair(
+        "A CPU executes program instructions efficiently.",
+        "A processor runs commands to execute the program.",
+        ["The processor carries out instructions for programs.", "Program commands are run by the CPU."]
+    );
+    const pair = (await compareSubmissions(submissions, [question]))[0];
+    assert.equal(pair.questions[0].commonAnswerPercent, 100);
+    assert.equal(pair.questions[0].reviewScore, Math.round(pair.questions[0].score * 0.4));
+    assert.equal(pair.questions[0].confidence, "low");
     setEmbeddingProvider(null);
 });
 
