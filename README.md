@@ -40,15 +40,17 @@ npm run dev
 
 Vite forwards `/api` calls to `http://localhost:5000`. Set `VITE_API_URL` at build time if the deployed frontend and API use different origins. Create student and lecturer accounts through the existing administrator-only `POST /api/auth/users` endpoint. First sign-in may require a password change.
 
+The first similarity report downloads an English-only sentence-embedding model (about 23 MB) to `%LOCALAPPDATA%\UniCheck\model-cache` on Windows. Student answers are embedded locally by the backend; answer text is not sent to an inference service. Set `UNICHECK_MODEL_CACHE` to choose a different cache directory, or `UNICHECK_EMBEDDING_MODEL` to use another compatible English Transformers.js model. Idea-level similarity is intended for English answers; the interface still accepts PDFs, but semantic scores for other languages may not be reliable. If the model cannot be loaded, the report remains available with text-overlap scoring and labels that fallback.
+
 ## MVP workflow
 
 1. A lecturer signs in and uploads a question-paper PDF from **Assignments**.
 2. UniCheck extracts text (OCR fallback for scans), stores the PDF privately, and creates question records in `review` status.
 3. UniCheck keeps non-empty question blocks, skips blank hierarchy rows and obvious table/figure OCR noise, and shows a review block for each extracted question. The lecturer can edit questions individually, verify one at a time, or use **Verify all questions**. Publishing is blocked until the extracted questions are verified.
-4. Students sign in and see only published assignments. They upload one answer PDF per assignment; answer sections should begin with labels such as `Q1`, `Q2(a)`, or `Q2(a)(i)`.
+4. Students sign in and see only published assignments. They upload one answer PDF per assignment. Write answers in English for the idea-similarity analysis. Start each main answer on a new line with `Q1`, `Q2`, `Q3`, and so on. Keep subparts such as `a)`, `e)`, `i)`, `ii)`, `1.`, or `2)` under that main question; do not use those subpart markers alone to start a new main answer. The upload page explains this format.
 5. The lecturer opens **Reports** and selects an assignment to compare each mapped answer question by question.
 
-Similarity is cosine overlap of normalized word counts. It is a review aid and can be affected by shared technical vocabulary, OCR quality, and answer length; it is not an automatic plagiarism finding. Unlabelled answers cannot be mapped reliably and are rejected for correction.
+Similarity reports combine local English sentence-embedding scores (85% of the score) with question-specific weighted word overlap (10%) and shared exact phrase evidence (5%). If the local model is unavailable, the report uses wording evidence only and identifies that fallback. Scores describe answer similarity; they do not decide why answers are similar. Short answers or answers common across many students are marked with lower evidence confidence, since a short common answer such as `4` is not informative by itself. The lecturer sees matched phrases and both answers to review the context.
 
 ## API overview
 
@@ -67,4 +69,4 @@ All PDFs are stored under `backend/private_uploads` and must remain untracked. J
 
 ## Checks
 
-From `backend`, run `npm test` for similarity-service unit tests. From the repository root, run `npm run build` and `npm run lint` for the frontend.
+From `backend`, run `npm test` for similarity-service and question-processing unit tests. From the repository root, run `npm run build` and `npm run lint` for the frontend.

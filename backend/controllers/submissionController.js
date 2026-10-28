@@ -36,7 +36,8 @@ async function submitAnswers(req, res) {
     if (req.file.buffer.subarray(0, 5).toString() !== "%PDF-") return res.status(400).json({ message: "The uploaded file is not a valid PDF." });
     const assignment = await Assignment.findOne({ _id: req.params.assignmentId, status: "published" });
     if (!assignment) return res.status(404).json({ message: "Published assignment not found." });
-    const questions = await Question.find({ assignmentId: assignment._id }).sort({ createdAt: 1 });
+    if (assignment.dueAt && assignment.dueAt.getTime() < Date.now()) return res.status(410).json({ message: "The submission deadline has passed." });
+    const questions = await Question.find({ assignmentId: assignment._id, verificationStatus: { $ne: "rejected" } }).sort({ createdAt: 1 });
     let extraction;
     try { extraction = await extractPdfText(req.file.buffer); }
     catch { return res.status(422).json({ message: "Could not read the answer PDF. Use a text PDF or check that OCR is installed." }); }
@@ -58,6 +59,15 @@ async function submitAnswers(req, res) {
 async function listMySubmissions(req, res) {
     if (req.user.mustChangePassword) return res.status(403).json({ message: "Please change your password before continuing." });
     const submissions = await Submission.find({ studentId: req.user.userId }).populate("assignmentId", "title").sort({ createdAt: -1 }).lean();
-    return res.json({ submissions: submissions.map((item) => ({ id: String(item._id), assignmentId: String(item.assignmentId._id), assignmentTitle: item.assignmentId.title, status: item.status, answerCount: item.answers.length, createdAt: item.createdAt })) });
+    return res.json({ submissions: submissions.map((item) => ({
+        id: String(item._id), assignmentId: String(item.assignmentId._id), assignmentTitle: item.assignmentId.title,
+        status: item.status, answerCount: item.answers.length, createdAt: item.createdAt,
+        similarityFeedbacks: (item.similarityFeedbacks || []).map((feedback) => ({
+            releaseId: feedback.releaseId, releasedAt: feedback.releasedAt,
+            overallScore: feedback.overallScore, level: feedback.level,
+            threshold: feedback.threshold, note: feedback.note,
+            questions: feedback.questions.map((question) => ({ questionNumber: question.questionNumber, score: question.score, level: question.level, confidence: question.confidence, confidenceNote: question.confidenceNote, commonAnswerPercent: question.commonAnswerPercent }))
+        }))
+    })) });
 }
 module.exports = { submitAnswers, listMySubmissions };

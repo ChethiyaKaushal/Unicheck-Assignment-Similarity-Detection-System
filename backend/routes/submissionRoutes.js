@@ -8,5 +8,6 @@ const router = express.Router();
 router.use(auth);
 router.get("/", roles("lecturer"), assignments.listSubmissions);
 router.get("/mine", roles("student"), controller.listMySubmissions);
+router.get("/:submissionId", roles("lecturer"), assignments.getLecturerSubmission);
 router.post("/:assignmentId", roles("student"), upload.single("pdf"), controller.submitAnswers);
 module.exports = router;

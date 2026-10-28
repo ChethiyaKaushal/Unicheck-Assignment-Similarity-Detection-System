@@ -26,15 +26,9 @@ const questionSchema = new mongoose.Schema(
             default: null
         },
 
-        marks: {
-            type: Number,
-            min: 0,
-            default: null
-        },
-
         verificationStatus: {
             type: String,
-            enum: ["pending", "verified", "needs_correction"],
+            enum: ["pending", "verified", "needs_correction", "rejected"],
             default: "pending"
         },
 
@@ -45,6 +39,17 @@ const questionSchema = new mongoose.Schema(
         },
 
         verifiedAt: {
+            type: Date,
+            default: null
+        },
+
+        rejectedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null
+        },
+
+        rejectedAt: {
             type: Date,
             default: null
         }

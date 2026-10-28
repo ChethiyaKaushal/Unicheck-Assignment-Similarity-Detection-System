@@ -14,6 +14,32 @@ const assignmentSchema = new mongoose.Schema(
             default: ""
         },
 
+        moduleCode: {
+            type: String,
+            trim: true,
+            default: "",
+            maxlength: 24
+        },
+
+        moduleName: {
+            type: String,
+            trim: true,
+            default: "",
+            maxlength: 120
+        },
+
+        dueAt: {
+            type: Date,
+            default: null
+        },
+
+        durationMinutes: {
+            type: Number,
+            min: 1,
+            max: 1440,
+            default: null
+        },
+
         lecturerId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",

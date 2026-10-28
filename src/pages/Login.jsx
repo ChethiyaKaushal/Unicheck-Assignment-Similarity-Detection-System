@@ -17,7 +17,7 @@ export default function Login() {
       if (result.user.role !== role) throw new Error(`This account belongs to the ${result.user.role} role.`);
       localStorage.setItem("unicheckToken", result.token);
       localStorage.setItem("unicheckUser", JSON.stringify(result.user));
-      navigate(result.user.mustChangePassword ? "/change-password" : result.user.role === "student" ? "/student/assignments" : "/lecturer-dashboard", { replace: true });
+      navigate(result.user.mustChangePassword ? "/change-password" : result.user.role === "student" ? "/student-dashboard" : "/lecturer-dashboard", { replace: true });
     } catch (issue) { setError(issue.message); }
     finally { setBusy(false); }
   }

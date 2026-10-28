@@ -60,7 +60,28 @@ const submissionSchema = new mongoose.Schema(
         processingError: {
             type: String,
             default: null
-        }
+        },
+
+        similarityFeedbacks: [{
+            pairKey: { type: String, required: true },
+            releaseId: { type: String, required: true },
+            releasedAt: { type: Date, required: true },
+            releasedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+            overallScore: { type: Number, min: 0, max: 100, required: true },
+            level: { type: String, enum: ["low", "medium", "high"], required: true },
+            threshold: { type: Number, default: 70 },
+            note: { type: String, trim: true, maxlength: 1000, default: "" },
+            questions: [{
+                questionId: { type: mongoose.Schema.Types.ObjectId, ref: "Question" },
+                questionNumber: { type: String, required: true },
+                score: { type: Number, min: 0, max: 100, required: true },
+                level: { type: String, enum: ["low", "medium", "high"], required: true },
+                confidence: { type: String, enum: ["low", "medium", "high"], default: "low" },
+                confidenceNote: { type: String, trim: true, maxlength: 300, default: "" },
+                commonAnswerPercent: { type: Number, min: 0, max: 100, default: 0 }
+            }]
+        }]
+
     },
     {
         timestamps: true
