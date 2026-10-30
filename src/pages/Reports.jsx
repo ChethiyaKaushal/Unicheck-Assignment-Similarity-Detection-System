@@ -1,381 +1,145 @@
-import { useNavigate } from "react-router-dom";
-
-function Reports() {
-  const navigate = useNavigate();
-
-  return (
-    <div className="flex min-h-screen bg-emerald-50">
-
-      {/* Sidebar */}
-      <nav className="flex flex-col w-64 min-h-screen bg-white p-6 shadow-md">
-
-        <h2 className="text-2xl font-bold text-emerald-700 mb-2">
-          UniCheck
-        </h2>
-
-        <p className="text-sm text-gray-500 mb-8">
-          Lecturer Panel
-        </p>
-
-        <div className="flex flex-col gap-2">
-
-          <button
-            onClick={() => navigate("/lecturer-dashboard")}
-            className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50"
-          >
-            Dashboard
-          </button>
-
-          <button
-            onClick={() => navigate("/assignments")}
-            className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50"
-          >
-            Assignments
-          </button>
-
-          <button
-            onClick={() => navigate("/submissions")}
-            className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50"
-          >
-            Submissions
-          </button>
-
-          <button
-            onClick={() => navigate("/similarity-check")}
-            className="text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50"
-          >
-            Similarity Check
-          </button>
-
-          <button
-            className="text-left px-4 py-3 rounded-lg bg-emerald-100 text-emerald-700 font-medium"
-          >
-            Reports
-          </button>
-
-        </div>
-
-        <div className="mt-auto">
-
-          <button
-            onClick={() => navigate("/profile")}
-            className="w-full text-left px-4 py-3 rounded-lg text-gray-600 hover:bg-emerald-50 mb-2"
-          >
-            Profile
-          </button>
-
-          <button
-            onClick={() => navigate("/login")}
-            className="w-full text-left px-4 py-3 rounded-lg text-red-500 hover:bg-red-50"
-          >
-            Logout
-          </button>
-
-        </div>
-
-      </nav>
-
-      {/* Main Content */}
-      <main className="flex-1 p-8">
-
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Reports
-          </h1>
-
-          <p className="text-gray-500 mt-1">
-            View and manage assignment similarity reports
-          </p>
-        </div>
-
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <p className="text-sm text-gray-500">
-              Total Reports
-            </p>
-
-            <h2 className="text-3xl font-bold text-emerald-700 mt-2">
-              89
-            </h2>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <p className="text-sm text-gray-500">
-              High Similarity
-            </p>
-
-            <h2 className="text-3xl font-bold text-red-500 mt-2">
-              14
-            </h2>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <p className="text-sm text-gray-500">
-              Low Similarity
-            </p>
-
-            <h2 className="text-3xl font-bold text-blue-600 mt-2">
-              75
-            </h2>
-          </div>
-
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-
-          <div className="flex flex-col md:flex-row gap-4">
-
-            <select className="border border-gray-200 rounded-lg px-4 py-3 text-gray-600">
-              <option>All Assignments</option>
-              <option>Database Assignment 01</option>
-              <option>Operating Systems Assignment 01</option>
-              <option>Computer Networks Assignment 01</option>
-              <option>Software Engineering Assignment 02</option>
-            </select>
-
-            <select className="border border-gray-200 rounded-lg px-4 py-3 text-gray-600">
-              <option>All Similarity Levels</option>
-              <option>High Similarity</option>
-              <option>Medium Similarity</option>
-              <option>Low Similarity</option>
-            </select>
-
-            <input
-              type="text"
-              placeholder="Search student..."
-              className="border border-gray-200 rounded-lg px-4 py-3 flex-1 outline-none focus:border-emerald-500"
-            />
-
-          </div>
-
-        </div>
-
-        {/* Reports Table */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-
-          <div className="p-6 border-b border-gray-100">
-
-            <h2 className="text-xl font-semibold text-gray-800">
-              Similarity Reports
-            </h2>
-
-          </div>
-
-          <div className="overflow-x-auto">
-
-            <table className="w-full">
-
-              <thead className="bg-emerald-50">
-
-                <tr>
-
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                    Student
-                  </th>
-
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                    Assignment
-                  </th>
-
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                    Similarity
-                  </th>
-
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                    Checked Date
-                  </th>
-
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                    Action
-                  </th>
-
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                <tr className="border-b border-gray-100">
-
-                  <td className="px-6 py-4">
-                    <p className="font-medium text-gray-800">
-                      Kasun Perera
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      CE2021-001
-                    </p>
-                  </td>
-
-                  <td className="px-6 py-4 text-gray-600">
-                    Database Assignment 01
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-medium">
-                      82%
-                    </span>
-                  </td>
-
-                  <td className="px-6 py-4 text-gray-600">
-                    24 Sep 2026
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <button className="text-emerald-600 hover:text-emerald-800 font-medium">
-                      View Report
-                    </button>
-                  </td>
-
-                </tr>
-
-                <tr className="border-b border-gray-100">
-
-                  <td className="px-6 py-4">
-                    <p className="font-medium text-gray-800">
-                      Nimal Fernando
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      CE2021-015
-                    </p>
-                  </td>
-
-                  <td className="px-6 py-4 text-gray-600">
-                    Database Assignment 01
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <span className="bg-yellow-100 text-yellow-600 px-3 py-1 rounded-full text-sm font-medium">
-                      48%
-                    </span>
-                  </td>
-
-                  <td className="px-6 py-4 text-gray-600">
-                    23 Sep 2026
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <button className="text-emerald-600 hover:text-emerald-800 font-medium">
-                      View Report
-                    </button>
-                  </td>
-
-                </tr>
-
-                <tr className="border-b border-gray-100">
-
-                  <td className="px-6 py-4">
-                    <p className="font-medium text-gray-800">
-                      Tharushi Silva
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      CE2021-023
-                    </p>
-                  </td>
-
-                  <td className="px-6 py-4 text-gray-600">
-                    Operating Systems Assignment 01
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <span className="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full text-sm font-medium">
-                      18%
-                    </span>
-                  </td>
-
-                  <td className="px-6 py-4 text-gray-600">
-                    22 Sep 2026
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <button className="text-emerald-600 hover:text-emerald-800 font-medium">
-                      View Report
-                    </button>
-                  </td>
-
-                </tr>
-
-                <tr className="border-b border-gray-100">
-
-                  <td className="px-6 py-4">
-                    <p className="font-medium text-gray-800">
-                      Dinesh Kumar
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      CE2021-031
-                    </p>
-                  </td>
-
-                  <td className="px-6 py-4 text-gray-600">
-                    Computer Networks Assignment 01
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-medium">
-                      76%
-                    </span>
-                  </td>
-
-                  <td className="px-6 py-4 text-gray-600">
-                    21 Sep 2026
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <button className="text-emerald-600 hover:text-emerald-800 font-medium">
-                      View Report
-                    </button>
-                  </td>
-
-                </tr>
-
-                <tr>
-
-                  <td className="px-6 py-4">
-                    <p className="font-medium text-gray-800">
-                      Amaya Perera
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      CE2021-042
-                    </p>
-                  </td>
-
-                  <td className="px-6 py-4 text-gray-600">
-                    Software Engineering Assignment 02
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <span className="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full text-sm font-medium">
-                      12%
-                    </span>
-                  </td>
-
-                  <td className="px-6 py-4 text-gray-600">
-                    20 Sep 2026
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <button className="text-emerald-600 hover:text-emerald-800 font-medium">
-                      View Report
-                    </button>
-                  </td>
-
-                </tr>
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        </div>
-
-      </main>
-
-    </div>
-  );
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { api } from "../lib/api";
+
+export default function Reports() {
+  const [params, setParams] = useSearchParams();
+  const [assignments, setAssignments] = useState([]);
+  const [report, setReport] = useState(null);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [notes, setNotes] = useState({});
+  const [sharing, setSharing] = useState("");
+  const [comparing, setComparing] = useState(false);
+  const selected = params.get("assignment") || "";
+  const selectedAssignment = assignments.find((item) => item.id === selected);
+  const loadingReport = Boolean(selected && report?.assignment.id !== selected && !error);
+
+  useEffect(() => {
+    api("/assignments").then((data) => setAssignments(data.assignments)).catch((issue) => setError(issue.message));
+  }, []);
+
+  useEffect(() => {
+    if (!selected) return undefined;
+    let active = true;
+    const refresh = () => api("/assignments/" + selected + "/report")
+      .then((data) => { if (active) setReport(data); })
+      .catch((issue) => { if (active) setError(issue.message); });
+    void refresh();
+    const timer = window.setInterval(refresh, 10000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [selected]);
+
+  async function shareFeedback(pair) {
+    const pairKey = pair.submissionIds.join(":");
+    setSharing(pairKey); setError(""); setMessage("");
+    try {
+      const result = await api("/assignments/" + selected + "/report/share", {
+        method: "POST",
+        body: { submissionIds: pair.submissionIds, note: notes[pairKey] || "" }
+      });
+      setMessage(result.message);
+      setReport((current) => current ? {
+        ...current,
+        pairs: current.pairs.map((item) => item.submissionIds.join(":") === pairKey
+          || item.submissionIds.slice().reverse().join(":") === pairKey
+          ? { ...item, feedbackShared: true }
+          : item)
+      } : current);
+    } catch (issue) { setError(issue.message); }
+    finally { setSharing(""); }
+  }
+
+  async function compareNow() {
+    setComparing(true); setError(""); setMessage("");
+    try {
+      await api(`/assignments/${selected}/report/run`, { method: "POST" });
+      setMessage("Comparison started for the PDFs submitted so far. This report will refresh automatically; run it again after more students submit.");
+      const data = await api(`/assignments/${selected}/report`);
+      setReport(data);
+    } catch (issue) { setError(issue.message); }
+    finally { setComparing(false); }
+  }
+
+  return <div className="min-h-screen bg-emerald-50 p-5 md:p-8"><main className="mx-auto max-w-7xl">
+    <p className="text-sm font-semibold uppercase tracking-wide text-amber-400">Lecturer workspace</p>
+    <h1 className="mt-2 text-3xl font-bold text-gray-800">Compare student answers</h1>
+    <p className="mt-2 text-gray-600">Each question shows both saved answers side by side. Scores describe answer similarity only; they do not decide why answers are alike. You decide whether to share feedback with students.</p>
+    <label className="mt-6 block max-w-xl text-sm font-medium text-gray-600">Assignment<select value={selected} onChange={(event) => { setError(""); setMessage(""); setReport(null); setParams(event.target.value ? { assignment: event.target.value } : {}); }} className="mt-2 w-full rounded-lg border bg-white p-3"><option value="">Choose an assignment</option>{assignments.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+    {loadingReport && <p role="status" className="mt-4 text-sm text-gray-500">Comparing answers… the first report may take longer while the local language model loads.</p>}
+    {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
+    {message && <p role="status" className="mt-4 rounded-lg bg-emerald-50 p-3 text-emerald-700">{message}</p>}
+    {selected && <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={compareNow} disabled={comparing || report?.reportStatus === "processing" || (selectedAssignment?.submissionCount || 0) < 2} className="rounded-lg bg-emerald-600 px-4 py-2 text-white disabled:opacity-50">{comparing || report?.reportStatus === "processing" ? "Comparing submitted PDFs…" : report?.reportStatus === "completed" ? "Compare latest submissions" : "Compare submissions now"}</button><span className="text-xs text-gray-500">{(selectedAssignment?.submissionCount || 0) < 2 ? "At least two student PDFs must be submitted first." : "Available before or after the deadline; each run uses submissions received at that time."}</span></div>}
+    {report?.assignment.id === selected && <>
+      <div className="mt-5 rounded-xl bg-white p-5 shadow-sm">
+        <h2 className="text-xl font-semibold">{report.assignment.title}</h2>
+        <p className="mt-1 text-gray-600">{report.submissionCount} submissions · {report.automatic ? `${report.pairsCompared ?? 0} pairs compared · ${report.criticalPairCount ?? report.pairs.length} pairs met the review threshold` : `${report.pairs.length} student pairs`}</p>
+        <p className="mt-3 rounded-lg bg-slate-900/5 p-3 text-sm text-gray-600">{report.note}</p>
+        {report.truncated && <p className="mt-3 rounded-lg bg-amber-950/20 p-3 text-sm text-amber-300">Showing the highest 300 similarity pairs. {report.criticalPairCount - report.pairs.length} additional pairs also met the threshold.</p>}
+      </div>
+      {report.reportStatus === "waiting_deadline"
+        ? <p className="mt-4 rounded-xl bg-white p-5 text-gray-600">Automatic final comparison runs after the deadline. You can also compare the current submissions any time with the button above.</p>
+        : report.reportStatus === "processing" || report.reportStatus === "failed"
+        ? <p className="mt-4 rounded-xl bg-white p-5 text-gray-600">{report.note}</p>
+        : report.pairs.length === 0
+        ? <p className="mt-4 rounded-xl bg-white p-5 text-gray-600">At least two submissions with mapped answers are needed for a comparison.</p>
+        : <div className="mt-5 space-y-6">{report.pairs.map((pair) => {
+          const pairKey = pair.submissionIds.join(":");
+          return <section key={pairKey} className="rounded-xl bg-white p-5 shadow-sm">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-400">Student comparison</p>
+                <h3 className="mt-1 text-lg font-semibold">{pair.students[0].username} <span className="text-gray-500">vs</span> {pair.students[1].username}</h3>
+                <p className="text-sm text-gray-500">{pair.comparedQuestions} questions with two answers to compare · {pair.similarityMethod === "semantic+text" ? "idea and wording comparison" : "wording comparison only"}</p>
+              </div>
+              <div className="flex flex-col gap-1 text-right"><span className="rounded-full bg-amber-100 px-4 py-2 font-semibold text-amber-800">Raw similarity {pair.score}% · {pair.level}</span><span className="text-xs text-gray-500">Review signal {pair.reviewScore ?? pair.score}% (adjusted for short/common answers)</span></div>
+            </header>
+            <div className="mt-4 rounded-lg border border-amber-900/30 bg-amber-950/10 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h4 className="font-semibold">Share feedback with these students?</h4>
+                  <p className="mt-1 max-w-3xl text-sm text-gray-500">This shares the overall score and question scores, including questions at or above 70%. It does not reveal the other student’s name or answer.</p>
+                </div>
+                <button type="button" disabled={Boolean(sharing)} onClick={() => shareFeedback(pair)} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-50">{sharing === pairKey ? "Sharing…" : pair.feedbackShared ? "Update shared feedback" : "Share feedback with both"}</button>
+              </div>
+              <label className="mt-3 block text-xs text-gray-500">Optional note from lecturer<textarea value={notes[pairKey] || ""} onChange={(event) => setNotes((current) => ({ ...current, [pairKey]: event.target.value }))} maxLength={1000} rows={2} className="mt-1 w-full rounded-lg border p-3 text-sm" placeholder="Add context or explain what the students should review." /></label>
+              {pair.feedbackShared && <p className="mt-2 text-xs text-emerald-700">Feedback has been released to both student dashboards.</p>}
+            </div>
+            <div className="mt-4 space-y-4">{pair.questions.map((question) => <article key={question.questionId} className="rounded-lg border border-white/10 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h4 className="font-semibold text-amber-700">{question.questionNumber}</h4>
+                {question.score === null
+                  ? <span className="text-sm text-gray-500">Cannot compare: one answer is missing</span>
+                  : <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">Raw similarity {question.score}% · {question.level}</span><span className="text-xs text-gray-500">Review signal {question.reviewScore ?? question.score}%</span></div>}
+              </div>
+              {question.score !== null && <div className="mb-3 rounded-lg bg-slate-900/5 p-3 text-sm">
+                <p className="font-medium">Comparison details</p>
+                <p className="mt-1 text-gray-600">
+                  Wording overlap: {question.wordingScore ?? "—"}%
+                  {question.semanticScore !== null
+                    ? " · Idea similarity: " + question.semanticScore + "%"
+                    : " · Idea similarity unavailable (text-only fallback)"}
+                  {question.codeScore !== null && question.codeScore !== undefined ? " · Code structure: " + question.codeScore + "%" : ""}
+                </p>
+                <p className="mt-1 text-gray-500">Text evidence: {question.confidence}. {question.confidenceNote}</p>
+                {question.commonAnswerPercent >= 35 && <p className="mt-1 text-gray-500">A similar answer appears in {question.commonAnswerPercent}% of submissions for this question.</p>}
+                {question.matchedPhrases?.length > 0 && <div className="mt-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Shared exact wording</p>
+                  <ul className="mt-1 list-disc pl-5 text-gray-700">{question.matchedPhrases.map((phrase) => <li key={phrase}>{phrase}</li>)}</ul>
+                </div>}
+              </div>}
+              <div className="grid gap-3 md:grid-cols-2">{pair.students.map((student, index) => {
+                const response = question.studentAnswers?.find((answer) => answer.studentId === student.id) || question.studentAnswers?.[index];
+                const responseText = response?.answerText || "No answer was mapped to this question.";
+                const codeAnswer = /[{};]|(?:==|!=|<=|>=|&&|\|\||=>|\+\+|--)/.test(responseText);
+                return <section key={student.id} className="min-w-0 rounded-lg bg-black/10 p-4">
+                  <div className="mb-2 border-b border-white/10 pb-2"><p className="font-medium">{student.username}</p><p className="text-xs text-gray-500">{student.email}</p></div>
+                  {codeAnswer ? <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-sm leading-6 text-gray-700">{responseText}</pre> : <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">{responseText}</p>}
+                </section>;
+              })}</div>
+            </article>)}</div>
+          </section>;
+        })}</div>}
+    </>}
+  </main></div>;
 }
-
-export default Reports;

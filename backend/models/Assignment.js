@@ -1,48 +1,68 @@
 const mongoose = require("mongoose");
 
-const submissionSchema = new mongoose.Schema(
+const assignmentSchema = new mongoose.Schema(
     {
-        studentId: {
+        title: {
+            type: String,
+            required: true,
+            trim: true
+        },
+
+        description: {
+            type: String,
+            trim: true,
+            default: ""
+        },
+
+        moduleCode: {
+            type: String,
+            trim: true,
+            default: "",
+            maxlength: 24
+        },
+
+        moduleId: { type: mongoose.Schema.Types.ObjectId, ref: "Module", default: null },
+
+        moduleName: {
+            type: String,
+            trim: true,
+            default: "",
+            maxlength: 120
+        },
+
+        dueAt: {
+            type: Date,
+            required: true
+        },
+
+        durationMinutes: {
+            type: Number,
+            min: 1,
+            max: 1440,
+            default: null
+        },
+
+        similarityStatus: { type: String, enum: ["pending", "processing", "completed", "failed"], default: "pending" },
+        similarityStartedAt: { type: Date, default: null },
+        similarityCompletedAt: { type: Date, default: null },
+        adminArchived: { type: Boolean, default: false },
+        adminArchivedAt: { type: Date, default: null },
+
+        lecturerId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true
         },
 
-        assignmentId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Assignment",
-            required: true
-        },
-
-        answerPaper: {
+        questionPaper: {
             type: String,
             required: true
-        },
-
-        answers: [
-            {
-                questionNumber: {
-                    type: Number,
-                    required: true
-                },
-
-                answerText: {
-                    type: String,
-                    required: true,
-                    trim: true
-                }
-            }
-        ],
-
-        submittedAt: {
-            type: Date,
-            default: Date.now
         },
 
         status: {
             type: String,
-            enum: ["submitted", "processing", "processed", "failed"],
-            default: "submitted"
+            enum: ["draft", "processing", "review", "published", "deleted"],
+            default: "draft"
         }
     },
     {
@@ -50,4 +70,4 @@ const submissionSchema = new mongoose.Schema(
     }
 );
 
-module.exports = mongoose.model("Submission", submissionSchema);
+module.exports = mongoose.model("Assignment", assignmentSchema);

@@ -21,26 +21,76 @@ const submissionSchema = new mongoose.Schema(
 
         answers: [
             {
-                questionNumber: {
-                    type: Number,
+                questionId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "Question",
                     required: true
                 },
 
-                question: {
+                answerText: {
                     type: String,
-                    required: true
+                    required: true,
+                    trim: true
                 },
 
-                answer: {
+                matchingStatus: {
                     type: String,
-                    required: true
+                    enum: [
+                        "matched",
+                        "needs_review",
+                        "unmatched"
+                    ],
+                    default: "needs_review"
                 }
             }
-        ]
+        ],
+
+        status: {
+            type: String,
+            enum: [
+                "submitted",
+                "processing",
+                "processed",
+                "needs_review",
+                "failed"
+            ],
+            default: "submitted"
+        },
+
+        processingError: {
+            type: String,
+            default: null
+        },
+
+        similarityFeedbacks: [{
+            pairKey: { type: String, required: true },
+            releaseId: { type: String, required: true },
+            releasedAt: { type: Date, required: true },
+            releasedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+            overallScore: { type: Number, min: 0, max: 100, required: true },
+            level: { type: String, enum: ["low", "medium", "high"], required: true },
+            threshold: { type: Number, default: 70 },
+            note: { type: String, trim: true, maxlength: 1000, default: "" },
+            questions: [{
+                questionId: { type: mongoose.Schema.Types.ObjectId, ref: "Question" },
+                questionNumber: { type: String, required: true },
+                score: { type: Number, min: 0, max: 100, required: true },
+                level: { type: String, enum: ["low", "medium", "high"], required: true },
+                confidence: { type: String, enum: ["low", "medium", "high"], default: "low" },
+                confidenceNote: { type: String, trim: true, maxlength: 300, default: "" },
+                commonAnswerPercent: { type: Number, min: 0, max: 100, default: 0 }
+            }]
+        }]
+
     },
     {
         timestamps: true
     }
+);
+
+submissionSchema.index(
+    { studentId: 1, assignmentId: 1 },
+    { unique: true }
 );
 
 module.exports = mongoose.model("Submission", submissionSchema);

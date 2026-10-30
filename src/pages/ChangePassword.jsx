@@ -1,0 +1,8 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { api } from "../lib/api";
+export default function ChangePassword() {
+  const navigate = useNavigate(); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  async function submit(event) { event.preventDefault(); setError(""); setBusy(true); const form = new FormData(event.currentTarget); try { await api("/auth/change-password", { method: "POST", body: { currentPassword: form.get("currentPassword"), newPassword: form.get("newPassword") } }); localStorage.removeItem("unicheckToken"); localStorage.removeItem("unicheckUser"); navigate("/login", { replace: true, state: { notice: "Password changed. Sign in with your new password." } }); } catch (issue) { setError(issue.message); } finally { setBusy(false); } }
+  return <main className="flex min-h-screen items-center justify-center bg-emerald-50 p-4"><form onSubmit={submit} className="w-full max-w-md space-y-4 rounded-2xl bg-white p-8 shadow"><h1 className="text-2xl font-bold text-emerald-700">Change your password</h1><p className="text-sm text-gray-600">Your administrator issued a temporary password. Set a new one to continue.</p>{error && <p role="alert" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}<label className="block">Current password<input name="currentPassword" type="password" required className="mt-2 w-full rounded border p-3" /></label><label className="block">New password (at least 8 characters)<input name="newPassword" type="password" minLength="8" required className="mt-2 w-full rounded border p-3" /></label><button disabled={busy} className="w-full rounded bg-emerald-600 p-3 text-white">{busy ? "Saving…" : "Change password"}</button></form></main>;
+}

@@ -1,0 +1,13 @@
+const express = require("express");
+const auth = require("../middleware/authMiddleware");
+const roles = require("../middleware/roleMiddleware");
+const controller = require("../controllers/moduleController");
+const router = express.Router();
+router.use(auth);
+router.use((req, res, next) => req.user.mustChangePassword ? res.status(403).json({ message: "Please change your password before continuing." }) : next());
+router.get("/mine", roles("student"), controller.listMyModules);
+router.post("/enroll", roles("student"), controller.enroll);
+router.delete("/:moduleId/enrollment", roles("student"), controller.removeEnrollment);
+router.get("/", roles("lecturer"), controller.listLecturerModules);
+router.post("/", roles("lecturer"), controller.createModule);
+module.exports = router;

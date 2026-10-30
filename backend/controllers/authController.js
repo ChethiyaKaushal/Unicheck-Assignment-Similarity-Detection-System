@@ -1,6 +1,12 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const AuditLog = require("../models/AuditLog");
+
+const listUsers = async (req, res) => {
+    const users = await User.find({}).select("username email role status mustChangePassword createdAt").sort({ role: 1, username: 1 }).lean();
+    return res.json({ users: users.map((user) => ({ id: String(user._id), username: user.username, email: user.email, role: user.role, status: user.status, mustChangePassword: user.mustChangePassword, createdAt: user.createdAt })) });
+};
 
 // Create a user account (admin only - route protection required)
 const createUser = async (req, res) => {
@@ -67,6 +73,7 @@ const createUser = async (req, res) => {
             status: "active",
             mustChangePassword: true
         });
+        await AuditLog.create({ actorId: req.user.userId, action: "user.create", targetType: "user", targetId: String(user._id), summary: `Created ${role} account ${user.email}.` });
 
         return res.status(201).json({
             message: "User account created successfully.",
@@ -259,6 +266,7 @@ const updateUserStatus = async (req, res) => {
 
         user.status = status;
         await user.save();
+        await AuditLog.create({ actorId: req.user.userId, action: status === "active" ? "user.activate" : "user.deactivate", targetType: "user", targetId: String(user._id), summary: `${status === "active" ? "Activated" : "Deactivated"} account ${user.email}.` });
 
         return res.status(200).json({
             message: `User account ${status === "active" ? "activated" : "deactivated"} successfully.`,
@@ -281,6 +289,7 @@ const updateUserStatus = async (req, res) => {
 
 
 module.exports = {
+    listUsers,
     createUser,
     loginUser,
     changePassword,

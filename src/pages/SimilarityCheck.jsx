@@ -1,7 +1,9 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 function SimilarityCheck() {
   const navigate = useNavigate();
+  const [checkStarted, setCheckStarted] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-emerald-50">
@@ -145,9 +147,9 @@ function SimilarityCheck() {
           </div>
 
           <button
-            className="mt-6 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+            onClick={() => setCheckStarted(true)} className="mt-6 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
           >
-            Run Similarity Check
+            {checkStarted ? "Demo check complete" : "Run Similarity Check"}
           </button>
 
         </div>

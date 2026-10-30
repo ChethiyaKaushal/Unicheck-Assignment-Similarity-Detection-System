@@ -1,34 +1,34 @@
 const dns = require("dns");
-
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 dns.setDefaultResultOrder("ipv4first");
-
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
 require("dotenv").config();
-
 const authRoutes = require("./routes/authRoutes");
-
+const uploadRoutes = require("./routes/uploadRoutes");
+const assignmentRoutes = require("./routes/assignmentRoutes");
+const submissionRoutes = require("./routes/submissionRoutes");
+const moduleRoutes = require("./routes/moduleRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+const { startSimilarityScheduler } = require("./services/similarityScheduler");
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Middleware
 app.use(cors());
 app.use(express.json());
-
-// Connect to MongoDB
-connectDB();
-
-// Root route
-app.get("/", (req, res) => {
-    res.send("UniCheck Backend is running!");
-});
-
-// Authentication routes
+connectDB().then(startSimilarityScheduler);
+app.get("/", (req, res) => res.send("UniCheck Backend is running!"));
 app.use("/api/auth", authRoutes);
-
-// Start server
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+app.use("/api/upload", uploadRoutes);
+app.use("/api/assignments", assignmentRoutes);
+app.use("/api/submissions", submissionRoutes);
+app.use("/api/modules", moduleRoutes);
+app.use("/api/admin", adminRoutes);
+app.use((error, req, res, next) => {
+    void next;
+    if (error && error.name === "MulterError") return res.status(400).json({ message: error.code === "LIMIT_FILE_SIZE" ? "PDF must not exceed 10 MB." : "Unable to accept this upload." });
+    if (error && error.message === "Only PDF files are allowed.") return res.status(400).json({ message: error.message });
+    console.error("Request failed:", error?.message);
+    return res.status(500).json({ message: "An internal server error occurred." });
 });
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
