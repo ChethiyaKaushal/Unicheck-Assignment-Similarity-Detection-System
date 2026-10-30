@@ -257,10 +257,53 @@ async function listPublishedAssignments(req, res) {
 
 async function listSubmissions(req, res) {
     if (!readyUser(req, res)) return;
-    const owned = await Assignment.find({ lecturerId: req.user.userId, adminArchived: { $ne: true }, status: { $ne: "deleted" } }).select("_id").lean();
-    const assignmentIds = owned.map((item) => item._id);
-    const submissions = await Submission.find({ assignmentId: { $in: assignmentIds }, active: { $ne: false } }).populate("studentId", "username email").populate("assignmentId", "title").sort({ createdAt: -1 }).lean();
-    return res.json({ submissions: submissions.map((item) => ({ id: String(item._id), assignmentId: String(item.assignmentId._id), assignmentTitle: item.assignmentId.title, student: { id: String(item.studentId._id), username: item.studentId.username, email: item.studentId.email }, status: item.status, answerCount: item.answers.length, createdAt: item.createdAt })) });
+    let assignmentIds;
+    if (req.query.assignmentId !== undefined) {
+        const assignmentId = req.query.assignmentId;
+        if (typeof assignmentId !== "string" || !validId(assignmentId)) {
+            return res.status(400).json({ message: "Invalid assignment id." });
+        }
+        const ownedAssignment = await Assignment.findOne({
+            _id: assignmentId,
+            lecturerId: req.user.userId,
+            adminArchived: { $ne: true },
+            status: { $ne: "deleted" }
+        }).select("_id").lean();
+        if (!ownedAssignment) return res.status(404).json({ message: "Assignment not found." });
+        assignmentIds = [ownedAssignment._id];
+    } else {
+        const ownedAssignments = await Assignment.find({
+            lecturerId: req.user.userId,
+            adminArchived: { $ne: true },
+            status: { $ne: "deleted" }
+        }).select("_id").lean();
+        assignmentIds = ownedAssignments.map((item) => item._id);
+    }
+
+    const submissions = await Submission.find({
+        assignmentId: { $in: assignmentIds },
+        active: { $ne: false }
+    })
+        .populate("studentId", "username email")
+        .populate("assignmentId", "title")
+        .sort({ createdAt: -1 })
+        .lean();
+
+    return res.json({
+        submissions: submissions.map((item) => ({
+            id: String(item._id),
+            assignmentId: String(item.assignmentId._id),
+            assignmentTitle: item.assignmentId.title,
+            student: {
+                id: String(item.studentId._id),
+                username: item.studentId.username,
+                email: item.studentId.email
+            },
+            status: item.status,
+            answerCount: item.answers.length,
+            createdAt: item.createdAt
+        }))
+    });
 }
 
 async function getLecturerSubmission(req, res) {

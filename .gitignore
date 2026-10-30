@@ -10,3 +10,11 @@ build/
 /backend/question-page-*.png
 /backend/question-paper-ocr.txt
 /backend/evaluation/labeled-pairs*.json
+
+# Local one-off test helpers and answer-sheet fixtures; keep files locally, do not commit them
+/Student_Answer_Sheet.pdf
+/backend/check-lecturer-login.js
+/backend/reset-test-lecturer.js
+/backend/test-ocr.js
+/backend/test-pdf.js
+/backend/scripts/seedUsers.js
