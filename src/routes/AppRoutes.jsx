@@ -31,7 +31,7 @@ function HomeRedirect() {
 }
 
 function AppRoutes() {
-  return <BrowserRouter><BrandBar /><Routes>
+  return <BrowserRouter basename={import.meta.env.BASE_URL}><BrandBar /><Routes>
     <Route path="/" element={<HomeRedirect />} />
     <Route path="/login" element={<Login />} />
     <Route path="/register" element={<Register />} />
